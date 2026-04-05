@@ -381,16 +381,18 @@ tr:hover td{background:var(--bg);}
 }
 .filter-select:focus{outline:none;border-color:var(--red);}
 .category-strip{
-  position:sticky;top:58px;z-index:120;background:var(--bg);padding:0 0 10px;margin-bottom:10px;
+  position:sticky;top:58px;z-index:650;background:var(--bg);padding:0 0 10px;margin-bottom:10px;
+  border-bottom:1px solid rgba(0,0,0,.04);
 }
 .category-scroll{
   display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
-  padding:2px 2px 8px;
+  padding:2px 2px 8px;touch-action:pan-x;position:relative;z-index:2;
 }
 .category-scroll::-webkit-scrollbar{display:none;}
 .category-pill{
   position:relative;flex:0 0 auto;padding:12px 18px;border:none;background:transparent;color:var(--text2);
-  font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;
+  font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;
+  -webkit-tap-highlight-color:transparent;
 }
 .category-pill::after{
   content:'';position:absolute;left:18px;right:18px;bottom:0;height:4px;border-radius:999px;background:transparent;
@@ -498,8 +500,11 @@ tr:hover td{background:var(--bg);}
   .order-item-header{padding:12px;}
   .section-header{margin-bottom:14px;}
   /* 商品列表底部留出折叠购物车的高度 */
-  #page-order .container{padding-bottom:80px;}
-  .product-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;}
+  #page-order .container{padding-bottom:88px;}
+  .product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+  .product-name{font-size:13px;}
+  .product-price{font-size:15px;}
+  .product-stock{font-size:10px;}
   /* ★ 购物车 transform折叠方案 ★ */
   .cart-panel{
     position:fixed;bottom:0;left:0;right:0;
@@ -519,7 +524,7 @@ tr:hover td{background:var(--bg);}
   .cart-body{max-height:40vh;overflow-y:auto;}
   #cartTotalBar{display:flex !important;padding:10px 16px;border-top:1px solid var(--border);cursor:pointer;}
   #cartExpandHint{font-size:11px;color:var(--text3);}
-  .cart-header{cursor:pointer;}
+  .cart-header{cursor:default;}
   /* 默认收起时，只显示头部+合计条，避免遮住菜单 */
   .cart-panel:not(.cart-open) .cart-body,
   .cart-panel:not(.cart-open) #cartFooterContent{
@@ -597,8 +602,8 @@ tr:hover td{background:var(--bg);}
   .search-bar{gap:8px;}
   .search-input{min-width:0;font-size:13px;}
   .filter-select{font-size:12px;padding:8px 10px;}
-  .category-strip{top:52px;margin-bottom:8px;padding-bottom:8px;}
-  .category-pill{padding:10px 14px;font-size:14px;}
+  .category-strip{top:52px;margin-bottom:8px;padding-bottom:8px;background:var(--bg);z-index:700;}
+  .category-pill{padding:10px 14px;font-size:16px;}
   .category-pill::after{left:14px;right:14px;height:3px;}
 
   /* Stats */
@@ -730,7 +735,7 @@ tr:hover td{background:var(--bg);}
         </div>
         <div>
           <div class="cart-panel" id="cartPanel">
-            <div class="cart-header" id="cartHeaderEl" onclick="toggleCartDrawer()" style="cursor:pointer;">
+            <div class="cart-header" id="cartHeaderEl">
             🛒 <span class="ja">カート</span><span class="zh">购物车</span>
             <span id="cartCount" style="background:rgba(255,255,255,.25);border-radius:20px;padding:2px 10px;font-size:12px;margin-left:auto;"></span>
             <span id="cartDrawerArrow" style="font-size:14px;opacity:0.8;">▼</span>
@@ -1341,8 +1346,8 @@ function buildCategoryFilter() {
 
   const tabs = document.getElementById('categoryTabs');
   const allLabel = currentLang==='zh' ? '全部' : 'すべて';
-  tabs.innerHTML = `<button class="category-pill ${!catFilter?'active':''}" data-cat="" onclick="filterProductsCat('')">${allLabel}</button>` +
-    cats.map(c=>`<button class="category-pill ${catFilter===c?'active':''}" data-cat="${String(c).replace(/"/g,'&quot;')}" onclick="filterProductsCat(${JSON.stringify(c)})">${c}</button>`).join('');
+  tabs.innerHTML = `<button type="button" class="category-pill ${!catFilter?'active':''}" data-cat="">${allLabel}</button>` +
+    cats.map(c=>`<button type="button" class="category-pill ${catFilter===c?'active':''}" data-cat="${String(c).replace(/"/g,'&quot;')}">${c}</button>`).join('');
   syncCategoryTabPosition();
 }
 
@@ -1363,13 +1368,30 @@ function filterProductsCat(v) {
 function syncCategoryTabPosition() {
   const tabsWrap = document.getElementById('categoryTabs');
   if (!tabsWrap) return;
-  tabsWrap.querySelectorAll('.category-pill').forEach(btn => {
+  const buttons = [...tabsWrap.querySelectorAll('.category-pill')];
+  buttons.forEach(btn => {
     btn.classList.toggle('active', (btn.dataset.cat||'') === (catFilter||''));
   });
   const active = tabsWrap.querySelector('.category-pill.active');
-  if (active) active.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+  if (!active) return;
+  const activeIndex = buttons.indexOf(active);
+  const targetLeft = active.offsetLeft - (tabsWrap.clientWidth / 2) + (active.clientWidth / 2);
+  if (activeIndex >= 2) {
+    tabsWrap.scrollTo({ left: Math.max(0, targetLeft), behavior:'smooth' });
+  } else {
+    tabsWrap.scrollTo({ left: 0, behavior:'smooth' });
+  }
 }
 
+
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('#categoryTabs .category-pill');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  filterProductsCat(btn.dataset.cat || '');
+});
 function renderProducts(slideDir = '') {
   const cart2 = getCart();
   let list = allProducts.filter(p => {
@@ -2994,6 +3016,18 @@ function closeCartDrawer() {
   cartDrawerOpen = false;
   applyCartDrawerState();
 }
+
+
+let _cartScrollTick = false;
+window.addEventListener('scroll', () => {
+  if (window.innerWidth > 800 || !cartDrawerOpen) return;
+  if (_cartScrollTick) return;
+  _cartScrollTick = true;
+  requestAnimationFrame(() => {
+    closeCartDrawer();
+    _cartScrollTick = false;
+  });
+}, {passive:true});
 
 window.addEventListener('resize', applyCartDrawerState);
 window.addEventListener('load', applyCartDrawerState);
