@@ -383,8 +383,9 @@ tr:hover td{background:var(--bg);}
 }
 .filter-select:focus{outline:none;border-color:var(--red);}
 .category-strip{
-  position:sticky;top:58px;z-index:650;background:var(--bg);padding:0 0 10px;margin-bottom:10px;
+  position:sticky;top:58px;z-index:780;background:var(--bg);padding:0 0 10px;margin-bottom:10px;
   border-bottom:1px solid rgba(0,0,0,.04);
+  box-shadow:0 1px 0 rgba(0,0,0,.04);
 }
 .category-scroll{
   display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;
@@ -404,12 +405,12 @@ tr:hover td{background:var(--bg);}
 .category-pill.active::after{background:var(--red);}
 .modal-product-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
 .category-strip.is-fixed-mobile{
-  position:fixed !important;left:0;right:0;top:52px;z-index:860;
-  padding:0 12px 8px;background:var(--bg);
-  box-shadow:0 2px 10px rgba(0,0,0,.06);
+  position:sticky !important;left:auto;right:auto;top:52px;z-index:780;
+  padding:0 0 8px;background:var(--bg);
+  box-shadow:0 1px 0 rgba(0,0,0,.04);
 }
-.category-strip-placeholder{display:none;}
-.category-strip-placeholder.active{display:block;}
+.category-strip-placeholder{display:none !important;height:0 !important;}
+.category-strip-placeholder.active{display:none !important;height:0 !important;}
 .product-grid.slide-in-right{animation:slideInRight .24s ease;}
 .product-grid.slide-in-left{animation:slideInLeft .24s ease;}
 @keyframes slideInRight{from{opacity:.35;transform:translateX(32px)}to{opacity:1;transform:translateX(0)}}
@@ -540,7 +541,7 @@ tr:hover td{background:var(--bg);}
   .cart-body{max-height:40vh;overflow-y:auto;}
   #cartTotalBar{display:flex !important;padding:10px 16px;border-top:1px solid var(--border);cursor:pointer;}
   #cartExpandHint{font-size:11px;color:var(--text3);}
-  .cart-header{cursor:default;}
+  .cart-header{cursor:pointer;}
   /* 默认收起时，只显示头部+合计条，避免遮住菜单 */
   .cart-panel:not(.cart-open) .cart-body,
   .cart-panel:not(.cart-open) #cartFooterContent{
@@ -548,7 +549,7 @@ tr:hover td{background:var(--bg);}
   }
   .cart-panel:not(.cart-open){pointer-events:none;}
   .cart-panel:not(.cart-open) #cartTotalBar{pointer-events:auto;}
-  .cart-panel:not(.cart-open) .cart-header{pointer-events:none;}
+  .cart-panel:not(.cart-open) .cart-header{pointer-events:auto;}
   .cart-panel.cart-open .cart-body,
   .cart-panel.cart-open #cartFooterContent{
     display:block;
@@ -622,7 +623,10 @@ tr:hover td{background:var(--bg);}
   .search-bar{gap:8px;}
   .search-input{min-width:0;font-size:13px;}
   .filter-select{font-size:12px;padding:8px 10px;}
-  .category-strip{top:52px;margin-bottom:8px;padding:0 0 8px;background:var(--bg);z-index:700;overflow:hidden;}
+  .category-strip{top:52px;margin-bottom:8px;padding:0 0 8px;background:var(--bg);z-index:780;overflow:hidden;position:sticky;}
+  #page-order, #page-order .container{overflow:visible !important;}
+  body{overflow-x:hidden;}
+  html{overflow-x:hidden;}
   .category-scroll{padding-left:0;padding-right:0;}
   .category-pill{padding:10px 14px;font-size:16px;}
   .category-pill::after{left:14px;right:14px;height:3px;}
@@ -759,7 +763,7 @@ tr:hover td{background:var(--bg);}
         </div>
         <div>
           <div class="cart-panel" id="cartPanel">
-            <div class="cart-header" id="cartHeaderEl">
+            <div class="cart-header" id="cartHeaderEl" onclick="toggleCartDrawer()">
             🛒 <span class="ja">カート</span><span class="zh">购物车</span>
             <span id="cartCount" style="background:rgba(255,255,255,.25);border-radius:20px;padding:2px 10px;font-size:12px;margin-left:auto;"></span>
             <span id="cartDrawerArrow" style="font-size:14px;opacity:0.8;">▼</span>
@@ -973,7 +977,16 @@ tr:hover td{background:var(--bg);}
       <div class="form-group"><label class="form-label">在庫数 / 库存</label><input class="form-input" type="number" id="pStock" min="0"><div class="form-hint">0にすると自動で非公開 / 库存为0自动下架</div></div>
       <div class="form-group"><label class="form-label">絵文字 / Emoji</label><input class="form-input" id="pEmoji" placeholder="🥩" maxlength="4"></div>
     </div>
-    <div class="form-group"><label class="form-label"><span class="ja">画像URL（任意）</span><span class="sep"> / </span><span class="zh">图片URL（任意）</span></label><input class="form-input" id="pImage" placeholder="https://..."></div>
+    <div class="form-group">
+      <label class="form-label"><span class="ja">画像URL（任意）</span><span class="sep"> / </span><span class="zh">图片URL（任意）</span></label>
+      <input class="form-input" id="pImage" placeholder="https://...">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;">
+        <input type="file" id="pImageFile" accept="image/*" style="display:none;" onchange="handleProductImageUpload(event)">
+        <button type="button" class="btn btn-outline btn-sm" id="uploadImageBtn" onclick="document.getElementById('pImageFile').click()">📤 <span class="ja">画像をアップロード</span><span class="sep"> / </span><span class="zh">上传图片</span></button>
+        <span id="pImageUploadStatus" style="font-size:12px;color:var(--text3);"></span>
+      </div>
+      <div class="form-hint"><span class="ja">Supabase Storage の product-images バケットへ直接アップロードします</span><span class="sep"> / </span><span class="zh">将直接上传到 Supabase Storage 的 product-images 存储桶</span></div>
+    </div>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">
       <label class="toggle"><input type="checkbox" id="pActive"><span class="toggle-sl"></span></label>
       <span style="font-size:13px;color:var(--text2);"><span class="ja">公開中</span><span class="sep"> / </span><span class="zh">上架中</span></span>
@@ -1516,26 +1529,20 @@ function syncMobileCategorySticky() {
   const placeholder = document.getElementById('categoryStripPlaceholder');
   const pageOrder = document.getElementById('page-order');
   if (!strip || !placeholder || !pageOrder) return;
+  const nav = document.querySelector('.top-nav');
+  const navH = nav ? nav.offsetHeight : 52;
+  strip.style.top = navH + 'px';
   if (window.innerWidth > 800 || !pageOrder.classList.contains('active')) {
     strip.classList.remove('is-fixed-mobile');
     placeholder.classList.remove('active');
     placeholder.style.height = '0px';
     return;
   }
-  const nav = document.querySelector('.top-nav');
-  const navH = nav ? nav.offsetHeight : 52;
-  strip.style.top = navH + 'px';
-  const rect = strip.getBoundingClientRect();
-  if (rect.top <= navH) {
-    strip.classList.add('is-fixed-mobile');
-    strip.style.top = navH + 'px';
-    placeholder.classList.add('active');
-    placeholder.style.height = strip.offsetHeight + 'px';
-  } else {
-    strip.classList.remove('is-fixed-mobile');
-    placeholder.classList.remove('active');
-    placeholder.style.height = '0px';
-  }
+  // Keep it stable on mobile by relying on CSS sticky only.
+  // Avoid switching between sticky/fixed on scroll, which caused flicker.
+  strip.classList.add('is-fixed-mobile');
+  placeholder.classList.remove('active');
+  placeholder.style.height = '0px';
 }
 
 
@@ -2019,6 +2026,7 @@ async function saveOrderEdit(orderId, itemCount) {
 // PRODUCT MANAGEMENT (FACTORY)
 // ═══════════════════════════════════════════════
 let editProdId = null;
+const PRODUCT_IMAGE_BUCKET = 'product-images';
 
 async function renderProductTable() {
   const { data } = await sb.from('products').select('*').order('sort_order').order('created_at');
@@ -2048,10 +2056,56 @@ async function toggleProductActive(pid, val) {
   await sb.from('products').update({ active:val, updated_at:new Date().toISOString() }).eq('id',pid);
 }
 
+function resetProductImageUploadState() {
+  const fileEl = document.getElementById('pImageFile');
+  const statusEl = document.getElementById('pImageUploadStatus');
+  const btnEl = document.getElementById('uploadImageBtn');
+  if (fileEl) fileEl.value = '';
+  if (statusEl) {
+    statusEl.textContent = '';
+    statusEl.style.color = 'var(--text3)';
+  }
+  if (btnEl) btnEl.disabled = false;
+}
+
+async function handleProductImageUpload(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('pImageUploadStatus');
+  const btnEl = document.getElementById('uploadImageBtn');
+  try {
+    if (!sb) throw new Error(currentLang==='zh' ? 'Supabase 未连接' : 'Supabase 未接続');
+    if (!file.type.startsWith('image/')) throw new Error(currentLang==='zh' ? '请选择图片文件' : '画像ファイルを選択してください');
+    statusEl.textContent = currentLang==='zh' ? '上传中...' : 'アップロード中...';
+    statusEl.style.color = 'var(--text2)';
+    btnEl.disabled = true;
+    const safeName = (file.name || 'image').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = `products/${Date.now()}_${safeName}`;
+    const { error: uploadError } = await sb.storage.from(PRODUCT_IMAGE_BUCKET).upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: true,
+      contentType: file.type || 'image/jpeg'
+    });
+    if (uploadError) throw uploadError;
+    const { data: publicData } = sb.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(filePath);
+    document.getElementById('pImage').value = publicData.publicUrl || '';
+    statusEl.textContent = currentLang==='zh' ? '上传成功' : 'アップロード完了';
+    statusEl.style.color = 'var(--green)';
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = (currentLang==='zh' ? '上传失败：' : 'アップロード失敗：') + (err.message || err);
+    statusEl.style.color = 'var(--red)';
+  } finally {
+    btnEl.disabled = false;
+    event.target.value = '';
+  }
+}
+
 function openAddProduct(preset = {}) {
   editProdId = null;
   document.getElementById('modalProductTitle').textContent = currentLang==='ja' ? '商品追加' : '添加商品';
   ['pName','pNameZh','pSpec','pEmoji','pImage'].forEach(id=>document.getElementById(id).value='');
+  resetProductImageUploadState();
   populateCategorySelect(preset.category || '');
   document.getElementById('pPrice').value = preset.price ?? '0';
   document.getElementById('pStock').value = preset.stock ?? '0';
@@ -2066,6 +2120,7 @@ async function openEditProduct(pid) {
   const { data:p } = await sb.from('products').select('*').eq('id',pid).single();
   document.getElementById('modalProductTitle').textContent = currentLang==='ja' ? '商品編集' : '编辑商品';
   document.getElementById('saveAndContinueBtn').style.display = 'none';
+  resetProductImageUploadState();
   document.getElementById('pName').value = p.name;
   document.getElementById('pNameZh').value = p.name_zh||'';
   populateCategorySelect(p.category);
@@ -2108,6 +2163,7 @@ async function saveProduct(keepAdding = false) {
   if (keepAdding && !editProdId) {
     openAddProduct(continuePreset);
     document.getElementById('pEmoji').value = continuePreset.emoji || '📦';
+    document.getElementById('pName').focus();
     return;
   }
   closeModal('modalProduct');
