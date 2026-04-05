@@ -947,8 +947,22 @@ function showConfig() {
 }
 
 // Auto-init
+// ══ Supabase 接続設定 / Supabase连接设置 ══
+// ここに自分のURLとKeyを入れてください / 在这里填入你的URL和Key
+const SUPABASE_URL = '';   // 例: 'https://gbfdnbigkhoifofdiacz.supabase.co'
+const SUPABASE_KEY = '';   // 例: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdiZmRuYmlna2hvaWZvZmRpYWN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNjUwMjgsImV4cCI6MjA5MDk0MTAyOH0.nN2m8C3nGO43nh71p9I0lgkMyyW7Ko3_BcHr_EyuQgo'
+// ════════════════════════════════════════════
+
 window.addEventListener('load', () => {
   applyLang();
+  // 1. Use hardcoded values if provided
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    ls('sbUrl', SUPABASE_URL);
+    ls('sbKey', SUPABASE_KEY);
+    initSupabase(SUPABASE_URL, SUPABASE_KEY);
+    return;
+  }
+  // 2. Use previously saved values
   const url = ls('sbUrl'); const key = ls('sbKey');
   if (url && key) initSupabase(url, key);
   else document.getElementById('configScreen').style.display = 'flex';
