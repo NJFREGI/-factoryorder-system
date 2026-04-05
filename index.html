@@ -15,17 +15,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=Noto+Sans+SC:wght@300;400;500;700;900&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap');
 
 :root {
-  --red:#E8392A; --red-dark:#c0301f; --red-light:#fff0ee;
-  --green:#2a9e5b; --green-light:#eaf7f0;
-  --blue:#2A6BE8; --blue-light:#edf2ff;
-  --orange:#E87A2A; --orange-light:#fff4ea;
+  --red:#2563EB; --red-dark:#1d4ed8; --red-light:#eff6ff;
+  --green:#059669; --green-light:#ecfdf5;
+  --blue:#7c3aed; --blue-light:#f5f3ff;
+  --orange:#d97706; --orange-light:#fffbeb;
   --gold:#D4A843;
-  --bg:#F7F6F3; --bg2:#EEECEA; --white:#fff;
-  --text:#1A1A1A; --text2:#666; --text3:#aaa;
-  --border:#E0DDD8;
-  --shadow:0 2px 12px rgba(0,0,0,.08);
-  --shadow-lg:0 8px 32px rgba(0,0,0,.14);
+  --bg:#F8F9FA; --bg2:#F1F3F5; --white:#fff;
+  --text:#1A1A1A; --text2:#555; --text3:#999;
+  --border:#DEE2E6;
+  --shadow:0 2px 12px rgba(0,0,0,.07);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.12);
   --r:12px; --r-sm:8px;
+  --accent:#2563EB; --accent-dark:#1d4ed8;
 }
 
 
@@ -323,9 +324,15 @@ tr:hover td{background:var(--bg);}
   background:var(--red);color:white;padding:13px 16px;
   font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;
 }
-.cart-body{max-height:calc(100vh - 320px);overflow-y:auto;display:block !important;}
-/* Desktop cart footer always visible */
-@media(min-width:801px){#cartFooterContent{display:block !important;} #cartExpandHint{display:none !important;} #cartTotalBar{display:none !important;}}
+.cart-body{max-height:calc(100vh - 320px);overflow-y:auto;}
+/* Desktop: always show cart content */
+@media(min-width:801px){
+  #cartBody{display:block !important;}
+  #cartFooterContent{display:block !important;}
+  #cartTotalBar{display:none !important;}
+  #cartExpandHint{display:none !important;}
+  #cartDrawerArrow{display:none !important;}
+}
 .cart-item{
   display:flex;align-items:center;gap:10px;
   padding:11px 14px;border-bottom:1px solid var(--bg2);
@@ -442,9 +449,7 @@ tr:hover td{background:var(--bg);}
     border-radius:18px 18px 0 0;z-index:500;
     box-shadow:0 -4px 24px rgba(0,0,0,.18);
   }
-  /* Default collapsed on mobile - JS will manage open state */
-  .cart-body{max-height:38vh;display:none;}
-  #cartFooterContent{display:none;}
+  .cart-body{max-height:38vh;}
   .product-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;}
   .form-row{grid-template-columns:1fr;}
   .stats-grid{grid-template-columns:1fr 1fr;}
@@ -939,12 +944,32 @@ function saveConfig() {
   initSupabase(url, key);
 }
 
-function initSupabase(url, key) {
+async function initSupabase(url, key) {
   try {
     sb = supabase.createClient(url, key);
     document.getElementById('configScreen').style.display = 'none';
-    document.getElementById('loginScreen').style.display = 'flex';
     loadCutoffSetting();
+
+    // Try to restore previous session
+    const saved = ls('session');
+    if (saved && saved.id) {
+      try {
+        // Verify user still exists and is active in DB
+        const { data, error } = await sb.from('users')
+          .select('*').eq('id', saved.id).eq('active', true).single();
+        if (data && !error) {
+          currentUser = data;
+          ls('session', { id: data.id, name: data.name, role: data.role, password_hash: data.password_hash });
+          document.getElementById('mainApp').style.display = 'block';
+          document.getElementById('loginScreen').style.display = 'none';
+          initMainUI();
+          return;
+        }
+      } catch(e) { /* session invalid, fall through to login */ }
+      ls('session', null);
+    }
+
+    document.getElementById('loginScreen').style.display = 'flex';
   } catch(e) {
     alert('接続に失敗しました: ' + e.message);
   }
@@ -1054,6 +1079,8 @@ async function doLogin() {
     if (error || !data) { alert('IDまたはパスワードが違います / ID或密码错误'); return; }
     if (data.role !== loginType) { alert((currentLang==='zh'?'账号类型不匹配':'端末タイプが一致しません')); return; }
     currentUser = data;
+    // Save session to localStorage
+    ls('session', { id: data.id, name: data.name, role: data.role, password_hash: data.password_hash });
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
     initMainUI();
@@ -1063,6 +1090,7 @@ async function doLogin() {
 function doLogout() {
   currentUser = null;
   cart = [];
+  ls('session', null); // Clear saved session
   document.getElementById('mainApp').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('loginUser').value = '';
@@ -1089,6 +1117,7 @@ const roleTabs = {
 
 function initMainUI() {
   applyLang();
+  cartDrawerOpen = false;
   setTimeout(_applyCartDrawer, 100);
   const tabs = roleTabs[currentUser.role];
   document.getElementById('navTabs').innerHTML = tabs.map(t =>
@@ -1110,7 +1139,7 @@ function switchTab(id) {
 }
 
 function onTabActivate(id) {
-  if (id==='order') { loadProducts(); renderCutoffBanner(); checkReceiptRequired(); setTimeout(_applyCartDrawer, 50); }
+  if (id==='order') { loadProducts(); renderCutoffBanner(); checkReceiptRequired(); cartDrawerOpen=false; setTimeout(_applyCartDrawer, 100); }
   if (id==='order-history') { renderOrderHistory(); }
   if (id==='factory-orders') { renderFactoryOrders(); }
   if (id==='factory-products') { renderProductTable(); }
@@ -2187,8 +2216,11 @@ async function generateInvoicePDF() {
 // ═══════════════════════════════════════════════
 // DELIVERY
 // ═══════════════════════════════════════════════
+// Delivery sort order stored locally
+let delivSortOrder = JSON.parse(localStorage.getItem('delivSort')||'[]');
+
 async function renderDelivery() {
-  showLoading((currentLang==='zh'?'加载配送数据...':'配送データ読み込み中...'));
+  showLoading(currentLang==='zh'?'加载配送数据...':'配送データ読み込み中...');
   const { data:orders } = await sb.from('orders')
     .select('*, order_items(*)')
     .in('status', ['preparing','shipped','delivered'])
@@ -2198,53 +2230,178 @@ async function renderDelivery() {
   const dates = [...new Set((orders||[]).map(o=>o.order_date))].sort().reverse();
   const dEl = document.getElementById('delivDateFilter');
   const sd = dEl.value;
-  dEl.innerHTML = '<option value=""><span class="ja"><span class="ja">全日付</span><span class="zh">全部</span></span><span class="sep"> / </span><span class="zh">全部</span></option>' + dates.map(d=>`<option value="${d}">${d}</option>`).join('');
+  dEl.innerHTML = '<option value="">'+(currentLang==='zh'?'全部':'全日付')+'</option>' +
+    dates.map(d=>`<option value="${d}">${d}</option>`).join('');
   if (sd) dEl.value = sd;
   const fd = dEl.value;
-  const filtered = fd ? (orders||[]).filter(o=>o.order_date===fd) : (orders||[]);
+  let filtered = fd ? (orders||[]).filter(o=>o.order_date===fd) : (orders||[]);
+
+  // Apply saved sort order
+  if (delivSortOrder.length) {
+    filtered.sort((a,b) => {
+      const ia = delivSortOrder.indexOf(a.id);
+      const ib = delivSortOrder.indexOf(b.id);
+      if (ia===-1 && ib===-1) return 0;
+      if (ia===-1) return 1;
+      if (ib===-1) return -1;
+      return ia - ib;
+    });
+  }
 
   const el = document.getElementById('deliveryList');
-  if (!filtered.length) { el.innerHTML = `<div class='no-data'>${currentLang==='zh'?'暂无配送订单':'配送対象なし'}</div>`; return; }
+  if (!filtered.length) { el.innerHTML = `<div class="no-data">${currentLang==='zh'?'暂无配送订单':'配送対象なし'}</div>`; return; }
 
-  el.innerHTML = filtered.map(order => {
+  el.innerHTML = `
+  <div class="alert alert-info" style="margin-bottom:12px;font-size:13px;">
+    ☰ <span class="ja">ドラッグで配送順を変更できます</span><span class="zh">拖拽卡片可以调整配送顺序</span>
+  </div>` +
+  filtered.map(order => {
     const si = statusInfo(order.status);
+    const isOpen = false;
     return `
-    <div class="order-item">
+    <div class="order-item deli-card" data-id="${order.id}" draggable="true"
+      ondragstart="onDeliDragStart(event,this)" ondragover="onDeliDragOver(event,this)"
+      ondrop="onDeliDrop(event)" ondragend="onDeliDragEnd()"
+      style="cursor:grab;touch-action:auto;">
       <div class="order-item-header" onclick="toggleBody('dv_${order.id}')">
+        <span style="font-size:18px;color:var(--text3);cursor:grab;padding-right:4px;">⠿</span>
         <div class="order-no">#${order.order_no}</div>
         <div class="order-shop-name">🏪 ${displayName(order.shop_name)}</div>
-        <div class="order-date">${order.order_date}</div>
+        <div class="order-date" style="font-size:11px;">${order.order_date}</div>
         <span class="badge badge-${si.c}">${si.l}</span>
         <div class="order-amount">${fmt(order.total)}</div>
         <span style="color:var(--text3);font-size:12px;">▼</span>
       </div>
       <div class="order-body" id="dv_${order.id}">
-        <div class="table-wrap" style="margin-bottom:14px;">
-          <table><thead><tr><th>商品</th><th>規格</th><th>数量</th><th><span class="ja">欠品</span><span class="sep"> / </span><span class="zh">缺货</span></th><th><span class="ja">欠品備考</span><span class="zh">缺货备注</span></th></tr></thead>
-          <tbody>${(order.order_items||[]).map(item=>`
-            <tr style="${item.shortage?'background:var(--red-light);':''}">
-              <td>${item.product_emoji||'📦'} ${item.product_name}</td>
-              <td>${item.product_spec}</td><td>${item.qty}</td>
-              <td>
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0;">
-                  <input type="checkbox" ${item.shortage?'checked':''} onchange="delivShortage('${item.id}',this.checked)"
-                    style="width:20px;height:20px;cursor:pointer;accent-color:var(--red);">
-                  <span style="font-size:13px;color:var(--red);font-weight:700;"><span class="ja">欠品</span><span class="zh">缺货</span></span>
-                </label>
-              </td>
-              <td><input style="width:100px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:11px;" placeholder="備考..." value="${item.shortage_note||''}" onchange="delivShortagNote('${item.id}',this.value)"></td>
-            </tr>`).join('')}</tbody></table>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">
+          ${(order.order_items||[]).map(item=>`
+          <div style="background:${item.shortage?'#fff1f2':'var(--bg)'};border:1.5px solid ${item.shortage?'#fca5a5':'var(--border)'};border-radius:10px;padding:12px 14px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+              <span style="font-size:28px;line-height:1;">${item.product_emoji||'📦'}</span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:15px;font-weight:700;">${item.product_name}</div>
+                <div style="font-size:12px;color:var(--text3);margin-top:2px;">${item.product_spec}</div>
+              </div>
+              <div style="background:var(--red-light);border-radius:8px;padding:6px 14px;text-align:center;flex-shrink:0;">
+                <div style="font-size:22px;font-weight:900;color:var(--red);line-height:1;">${item.qty}</div>
+                <div style="font-size:10px;color:var(--text3);"><span class="ja">個</span><span class="zh">个</span></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;
+                background:${item.shortage?'#fee2e2':'white'};
+                border:1.5px solid ${item.shortage?'#f87171':'var(--border)'};
+                border-radius:8px;padding:8px 12px;flex:1;min-width:130px;">
+                <input type="checkbox" ${item.shortage?'checked':''} onchange="delivShortage('${item.id}',this.checked)"
+                  style="width:20px;height:20px;cursor:pointer;accent-color:#ef4444;flex-shrink:0;">
+                <span style="font-size:13px;font-weight:700;color:${item.shortage?'#dc2626':'var(--text2)'};">
+                  <span class="ja">欠品あり</span><span class="zh">缺货</span>
+                </span>
+              </label>
+              <input style="flex:1;min-width:120px;padding:8px 12px;border:1.5px solid var(--border);
+                border-radius:8px;font-size:13px;font-family:inherit;background:white;"
+                placeholder="備考 / 备注..."
+                value="${item.shortage_note||''}"
+                onchange="delivShortagNote('${item.id}',this.value)">
+            </div>
+          </div>`).join('')}
         </div>
-        <div class="flex gap-8 flex-wrap">
-          ${order.status!=='delivered'?`<button class="btn btn-green" onclick="markDelivered('${order.id}')" style="padding:12px 24px;font-size:15px;width:100%;justify-content:center;">
-              ✅ <span class="ja">配送完了</span><span class="zh">配送完成</span>
-            </button>`:''}
-          ${order.status==='delivered'?`<span class='badge badge-green' style='font-size:13px;padding:8px 16px;'>${currentLang==='zh'?'已完成':'配達完了済み'}</span>`:''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${order.status!=='delivered'?`
+          <button onclick="markDelivered('${order.id}')"
+            style="width:100%;padding:14px;background:var(--green);color:white;border:none;
+            border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;
+            display:flex;align-items:center;justify-content:center;gap:8px;">
+            ✅ <span class="ja">配送完了</span><span class="zh">配送完成</span>
+          </button>`:''}
+          ${order.status==='delivered'?`<div style="width:100%;text-align:center;padding:10px;background:var(--green-light);border-radius:8px;color:var(--green);font-weight:700;">
+            ✓ <span class="ja">配達完了済み</span><span class="zh">已完成</span>
+          </div>`:''}
         </div>
       </div>
     </div>`;
   }).join('');
+
+  // Init touch sort for mobile
+  initDeliTouchSort();
 }
+
+// ── Drag sort ──
+let _dragSrc = null;
+function onDeliDragStart(e, el) {
+  _dragSrc = el;
+  el.style.opacity = '0.5';
+  e.dataTransfer.effectAllowed = 'move';
+}
+function onDeliDragOver(e, el) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  el.style.borderColor = 'var(--red)';
+}
+function onDeliDrop(e) {
+  e.preventDefault();
+  const target = e.currentTarget;
+  if (_dragSrc && _dragSrc !== target) {
+    const list = document.getElementById('deliveryList');
+    const cards = [...list.querySelectorAll('.deli-card')];
+    const srcIdx = cards.indexOf(_dragSrc);
+    const tgtIdx = cards.indexOf(target);
+    if (srcIdx < tgtIdx) target.after(_dragSrc);
+    else target.before(_dragSrc);
+    saveDeliOrder();
+  }
+  target.style.borderColor = '';
+}
+function onDeliDragEnd() {
+  if (_dragSrc) _dragSrc.style.opacity = '';
+  document.querySelectorAll('.deli-card').forEach(c => c.style.borderColor = '');
+  _dragSrc = null;
+}
+function saveDeliOrder() {
+  const ids = [...document.querySelectorAll('.deli-card')].map(c => c.getAttribute('data-id'));
+  delivSortOrder = ids;
+  localStorage.setItem('delivSort', JSON.stringify(ids));
+}
+
+// ── Touch sort for mobile ──
+function initDeliTouchSort() {
+  const cards = [...document.querySelectorAll('.deli-card')];
+  cards.forEach(card => {
+    let startY, startTop, dragging = false, clone;
+    card.addEventListener('touchstart', e => {
+      const handle = e.target.closest('.order-item-header');
+      if (!handle) return;
+      startY = e.touches[0].clientY;
+      dragging = true;
+      card.style.opacity = '0.6';
+    }, {passive:true});
+    card.addEventListener('touchmove', e => {
+      if (!dragging) return;
+      e.preventDefault();
+      const dy = e.touches[0].clientY - startY;
+      const list = document.getElementById('deliveryList');
+      const cards2 = [...list.querySelectorAll('.deli-card')];
+      const myIdx = cards2.indexOf(card);
+      const rect = card.getBoundingClientRect();
+      const mid = rect.top + rect.height/2 + dy;
+      cards2.forEach((c,i) => {
+        if (c === card) return;
+        const r = c.getBoundingClientRect();
+        if (mid > r.top && mid < r.bottom) {
+          if (i > myIdx) c.after(card);
+          else c.before(card);
+        }
+      });
+    }, {passive:false});
+    card.addEventListener('touchend', () => {
+      if (!dragging) return;
+      dragging = false;
+      card.style.opacity = '';
+      saveDeliOrder();
+    });
+  });
+}
+
 
 async function delivShortage(itemId, val) {
   await sb.from('order_items').update({ shortage:val }).eq('id',itemId);
@@ -2639,35 +2796,41 @@ async function exportSummaryPDF() {
 
 
 
-// ── Mobile cart drawer ──
-let cartDrawerOpen = false; // default CLOSED on mobile
+// ── Mobile cart drawer (CSS class approach) ──
+let cartDrawerOpen = false;
 function toggleCartDrawer() {
-  if (window.innerWidth > 800) return; // desktop: always open
+  const isMobile = window.innerWidth <= 800;
+  if (!isMobile) return;
   cartDrawerOpen = !cartDrawerOpen;
   _applyCartDrawer();
 }
 function _applyCartDrawer() {
   const isMobile = window.innerWidth <= 800;
-  const body = document.getElementById('cartBody');
-  const footerContent = document.getElementById('cartFooterContent');
+  const panel = document.querySelector('.cart-panel');
   const arrow = document.getElementById('cartDrawerArrow');
   const hint = document.getElementById('cartExpandHint');
-  const open = !isMobile || cartDrawerOpen;
-  if (body) body.style.display = open ? '' : 'none';
-  if (footerContent) footerContent.style.display = open ? '' : 'none';
-  if (arrow) arrow.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
-  if (hint) hint.style.display = open ? 'none' : '';
+  const totalBar = document.getElementById('cartTotalBar');
+  if (!panel) return;
+  if (isMobile) {
+    if (cartDrawerOpen) panel.classList.add('cart-open');
+    else panel.classList.remove('cart-open');
+    if (arrow) arrow.textContent = cartDrawerOpen ? '▲' : '▼';
+    if (hint) hint.style.display = cartDrawerOpen ? 'none' : 'inline';
+    if (totalBar) totalBar.style.display = 'flex';
+  } else {
+    panel.classList.remove('cart-open');
+    if (arrow) arrow.style.display = 'none';
+    if (hint) hint.style.display = 'none';
+    if (totalBar) totalBar.style.display = 'none';
+  }
 }
-// Auto-open cart on mobile when item added
 function openCartDrawer() {
-  if (window.innerWidth > 800) return;
+  const isMobile = window.innerWidth <= 800;
+  if (!isMobile) return;
   cartDrawerOpen = true;
   _applyCartDrawer();
 }
-// Init on load
 window.addEventListener('resize', _applyCartDrawer);
-// Apply on initial load too
-window.addEventListener('load', () => { setTimeout(_applyCartDrawer, 100); });
 
 // Close modal overlay click
 document.querySelectorAll('.modal-overlay').forEach(el=>{
