@@ -383,10 +383,11 @@ tr:hover td{background:var(--bg);}
 }
 .filter-select:focus{outline:none;border-color:var(--red);}
 .category-strip{
-  position:sticky;top:58px;z-index:780;background:var(--bg);padding:0 0 10px;margin-bottom:10px;
+  position:sticky;top:58px;z-index:260;background:var(--bg);padding:0 0 10px;margin-bottom:10px;
   border-bottom:1px solid rgba(0,0,0,.04);
   box-shadow:0 1px 0 rgba(0,0,0,.04);
 }
+.category-strip-inner{width:100%;max-width:100%;}
 .category-scroll{
   display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;
   padding:2px 2px 8px;touch-action:pan-x;overscroll-behavior-x:contain;position:relative;z-index:2;white-space:nowrap;
@@ -405,12 +406,18 @@ tr:hover td{background:var(--bg);}
 .category-pill.active::after{background:var(--red);}
 .modal-product-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
 .category-strip.is-fixed-mobile{
-  position:sticky !important;left:auto;right:auto;top:52px;z-index:780;
-  padding:0 0 8px;background:var(--bg);
-  box-shadow:0 1px 0 rgba(0,0,0,.04);
+  position:fixed !important;
+  left:var(--category-fixed-left, 0px);
+  top:var(--category-fixed-top, 52px);
+  width:var(--category-fixed-width, 100vw);
+  z-index:320;
+  margin:0;
+  padding:0 0 8px;
+  background:var(--bg);
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
 }
-.category-strip-placeholder{display:none !important;height:0 !important;}
-.category-strip-placeholder.active{display:none !important;height:0 !important;}
+.category-strip-placeholder{display:none;height:0;}
+.category-strip-placeholder.active{display:block;height:var(--category-placeholder-height, 56px);}
 .product-grid.slide-in-right{animation:slideInRight .24s ease;}
 .product-grid.slide-in-left{animation:slideInLeft .24s ease;}
 @keyframes slideInRight{from{opacity:.35;transform:translateX(32px)}to{opacity:1;transform:translateX(0)}}
@@ -526,7 +533,7 @@ tr:hover td{background:var(--bg);}
   .cart-panel{
     position:fixed;bottom:0;left:0;right:0;width:100vw;
     border-radius:18px 18px 0 0;
-    z-index:400;
+    z-index:650;
     box-shadow:0 -4px 24px rgba(0,0,0,.2);
     transition:transform 0.28s cubic-bezier(0.4,0,0.2,1);
     transform:translateY(calc(100% - 52px));
@@ -623,7 +630,7 @@ tr:hover td{background:var(--bg);}
   .search-bar{gap:8px;}
   .search-input{min-width:0;font-size:13px;}
   .filter-select{font-size:12px;padding:8px 10px;}
-  .category-strip{top:52px;margin-bottom:8px;padding:0 0 8px;background:var(--bg);z-index:780;overflow:hidden;position:sticky;}
+  .category-strip{top:52px;margin-bottom:8px;padding:0 0 8px;background:var(--bg);z-index:260;overflow:hidden;position:sticky;}
   #page-order, #page-order .container{overflow:visible !important;}
   body{overflow-x:hidden;}
   html{overflow-x:hidden;}
@@ -756,7 +763,9 @@ tr:hover td{background:var(--bg);}
             </select>
           </div>
           <div class="category-strip" id="categoryStrip">
-            <div class="category-scroll" id="categoryTabs"></div>
+            <div class="category-strip-inner">
+              <div class="category-scroll" id="categoryTabs"></div>
+            </div>
           </div>
           <div class="category-strip-placeholder" id="categoryStripPlaceholder"></div>
           <div class="product-grid" id="productGrid"></div>
@@ -1524,25 +1533,64 @@ function tapAddCart() {
   renderCart();
 }
 
-function syncMobileCategorySticky() {
+let categoryStickyTicking = false;
+function syncMobileCategorySticky(force = false) {
   const strip = document.getElementById('categoryStrip');
   const placeholder = document.getElementById('categoryStripPlaceholder');
   const pageOrder = document.getElementById('page-order');
+  const cartPanel = document.getElementById('cartPanel');
   if (!strip || !placeholder || !pageOrder) return;
-  const nav = document.querySelector('.top-nav');
-  const navH = nav ? nav.offsetHeight : 52;
-  strip.style.top = navH + 'px';
-  if (window.innerWidth > 800 || !pageOrder.classList.contains('active')) {
-    strip.classList.remove('is-fixed-mobile');
-    placeholder.classList.remove('active');
-    placeholder.style.height = '0px';
+
+  const run = () => {
+    categoryStickyTicking = false;
+    const nav = document.querySelector('.top-nav');
+    const navH = nav ? Math.round(nav.getBoundingClientRect().height || nav.offsetHeight || 52) : 52;
+    strip.style.top = navH + 'px';
+    strip.style.setProperty('--category-fixed-top', navH + 'px');
+
+    const isMobile = window.innerWidth <= 800 && pageOrder.classList.contains('active');
+    const cartOpenNow = !!(cartPanel && cartPanel.classList.contains('cart-open'));
+    const parent = strip.parentElement;
+
+    document.body.classList.toggle('cart-open-mobile', cartOpenNow && window.innerWidth <= 800);
+
+    if (!isMobile || !parent || cartOpenNow) {
+      strip.classList.remove('is-fixed-mobile');
+      placeholder.classList.remove('active');
+      placeholder.style.height = '0px';
+      return;
+    }
+
+    const parentRect = parent.getBoundingClientRect();
+    const isFixed = strip.classList.contains('is-fixed-mobile');
+    const stripRect = strip.getBoundingClientRect();
+    const placeholderRect = placeholder.getBoundingClientRect();
+    const fixThreshold = navH + 1;
+    const releaseThreshold = navH + 12;
+    const shouldFix = isFixed ? (placeholderRect.top <= releaseThreshold) : (stripRect.top <= fixThreshold);
+
+    if (shouldFix) {
+      const width = Math.min(parentRect.width, window.innerWidth);
+      strip.style.setProperty('--category-fixed-left', Math.max(0, parentRect.left) + 'px');
+      strip.style.setProperty('--category-fixed-width', width + 'px');
+      strip.style.setProperty('--category-placeholder-height', strip.offsetHeight + 'px');
+      placeholder.style.height = strip.offsetHeight + 'px';
+      placeholder.classList.add('active');
+      strip.classList.add('is-fixed-mobile');
+    } else {
+      strip.classList.remove('is-fixed-mobile');
+      placeholder.classList.remove('active');
+      placeholder.style.height = '0px';
+    }
+  };
+
+  if (force) {
+    run();
     return;
   }
-  // Keep it stable on mobile by relying on CSS sticky only.
-  // Avoid switching between sticky/fixed on scroll, which caused flicker.
-  strip.classList.add('is-fixed-mobile');
-  placeholder.classList.remove('active');
-  placeholder.style.height = '0px';
+  if (categoryStickyTicking) return;
+  categoryStickyTicking = true;
+  requestAnimationFrame(run);
 }
 
 
@@ -3135,6 +3183,7 @@ function applyCartDrawerState() {
   panel.classList.toggle('cart-open', cartDrawerOpen);
   if (arrow) arrow.textContent = cartDrawerOpen ? '▲' : '▼';
   if (hint) hint.style.opacity = cartDrawerOpen ? '0' : '1';
+  syncMobileCategorySticky(true);
 }
 
 function toggleCartDrawer() {
@@ -3186,8 +3235,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }, {passive:true});
   }
 });
-window.addEventListener('resize', () => { applyCartDrawerState(); syncMobileCategorySticky(); });
-window.addEventListener('load', () => { applyCartDrawerState(); syncMobileCategorySticky(); });
+window.addEventListener('resize', () => { applyCartDrawerState(); syncMobileCategorySticky(true); });
+window.addEventListener('load', () => { applyCartDrawerState(); syncMobileCategorySticky(true); });
 window.addEventListener('scroll', syncMobileCategorySticky, {passive:true});
 document.addEventListener('DOMContentLoaded', () => { setTimeout(syncMobileCategorySticky, 150); });
 
