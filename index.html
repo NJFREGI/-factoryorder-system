@@ -368,7 +368,7 @@ tr:hover td{background:var(--bg);}
 .cutoff-time-big{font-size:28px;font-weight:900;font-variant-numeric:tabular-nums;}
 
 /* SEARCH */
-.search-bar{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+.search-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
 .search-input{
   flex:1;min-width:180px;padding:10px 16px;border:2px solid var(--border);
   border-radius:var(--r-sm);font-size:14px;font-family:inherit;
@@ -380,6 +380,28 @@ tr:hover td{background:var(--bg);}
   font-size:13px;font-family:inherit;background:white;cursor:pointer;
 }
 .filter-select:focus{outline:none;border-color:var(--red);}
+.category-strip{
+  position:sticky;top:58px;z-index:120;background:var(--bg);padding:0 0 10px;margin-bottom:10px;
+}
+.category-scroll{
+  display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  padding:2px 2px 8px;
+}
+.category-scroll::-webkit-scrollbar{display:none;}
+.category-pill{
+  position:relative;flex:0 0 auto;padding:12px 18px;border:none;background:transparent;color:var(--text2);
+  font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;
+}
+.category-pill::after{
+  content:'';position:absolute;left:18px;right:18px;bottom:0;height:4px;border-radius:999px;background:transparent;
+  transition:all .22s ease;
+}
+.category-pill.active{color:var(--red);}
+.category-pill.active::after{background:var(--red);}
+.product-grid.slide-in-right{animation:slideInRight .24s ease;}
+.product-grid.slide-in-left{animation:slideInLeft .24s ease;}
+@keyframes slideInRight{from{opacity:.35;transform:translateX(32px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideInLeft{from{opacity:.35;transform:translateX(-32px)}to{opacity:1;transform:translateX(0)}}
 
 /* ORDER LIST ITEM */
 .order-item{
@@ -575,6 +597,9 @@ tr:hover td{background:var(--bg);}
   .search-bar{gap:8px;}
   .search-input{min-width:0;font-size:13px;}
   .filter-select{font-size:12px;padding:8px 10px;}
+  .category-strip{top:52px;margin-bottom:8px;padding-bottom:8px;}
+  .category-pill{padding:10px 14px;font-size:14px;}
+  .category-pill::after{left:14px;right:14px;height:3px;}
 
   /* Stats */
   .stats-grid{grid-template-columns:1fr 1fr;gap:10px;}
@@ -694,9 +719,12 @@ tr:hover td{background:var(--bg);}
           </div>
           <div class="search-bar">
             <input class="search-input" placeholder="🔍 商品名検索 / 搜索商品..." data-ph-ja="🔍 商品名検索..." data-ph-zh="🔍 搜索商品..." oninput="filterProducts(this.value)" id="productSearch">
-            <select class="filter-select" id="catFilter" onchange="filterProductsCat(this.value)">
+            <select class="filter-select" id="catFilter" onchange="filterProductsCat(this.value)" style="display:none;">
               <option value="" id="catFilterAll"><span class="ja">全カテゴリ</span><span class="sep"> / </span><span class="zh">全部</span></option>
             </select>
+          </div>
+          <div class="category-strip">
+            <div class="category-scroll" id="categoryTabs"></div>
           </div>
           <div class="product-grid" id="productGrid"></div>
         </div>
@@ -1287,6 +1315,7 @@ async function saveCutoffTime() {
 let allProducts = [];
 let searchTerm = '';
 let catFilter = '';
+let lastCatFilter = '';
 let tapProduct = null, tapQtyVal = 1;
 
 async function loadProducts() {
@@ -1304,17 +1333,44 @@ async function loadProducts() {
 }
 
 function buildCategoryFilter() {
-  const cats = [...new Set(allProducts.map(p=>p.category))];
+  const cats = [...new Set(allProducts.map(p=>p.category).filter(Boolean))];
   const el = document.getElementById('catFilter');
   el.innerHTML = '<option value=""><span class="ja">全カテゴリ</span><span class="sep"> / </span><span class="zh">全部</span></option>' +
     cats.map(c=>`<option value="${c}">${c}</option>`).join('');
   if (catFilter) el.value = catFilter;
+
+  const tabs = document.getElementById('categoryTabs');
+  const allLabel = currentLang==='zh' ? '全部' : 'すべて';
+  tabs.innerHTML = `<button class="category-pill ${!catFilter?'active':''}" data-cat="" onclick="filterProductsCat('')">${allLabel}</button>` +
+    cats.map(c=>`<button class="category-pill ${catFilter===c?'active':''}" data-cat="${String(c).replace(/"/g,'&quot;')}" onclick="filterProductsCat(${JSON.stringify(c)})">${c}</button>`).join('');
+  syncCategoryTabPosition();
 }
 
 function filterProducts(v) { searchTerm = v; renderProducts(); }
-function filterProductsCat(v) { catFilter = v; renderProducts(); }
+function filterProductsCat(v) {
+  const nextCat = v || '';
+  const prevCats = ['', ...new Set(allProducts.map(p=>p.category).filter(Boolean))];
+  const prevIndex = prevCats.indexOf(catFilter||'');
+  const nextIndex = prevCats.indexOf(nextCat);
+  lastCatFilter = catFilter || '';
+  catFilter = nextCat;
+  const sel = document.getElementById('catFilter');
+  if (sel) sel.value = catFilter;
+  renderProducts(nextIndex >= prevIndex ? 'right' : 'left');
+  syncCategoryTabPosition();
+}
 
-function renderProducts() {
+function syncCategoryTabPosition() {
+  const tabsWrap = document.getElementById('categoryTabs');
+  if (!tabsWrap) return;
+  tabsWrap.querySelectorAll('.category-pill').forEach(btn => {
+    btn.classList.toggle('active', (btn.dataset.cat||'') === (catFilter||''));
+  });
+  const active = tabsWrap.querySelector('.category-pill.active');
+  if (active) active.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+}
+
+function renderProducts(slideDir = '') {
   const cart2 = getCart();
   let list = allProducts.filter(p => {
     const q = searchTerm.toLowerCase();
@@ -1324,6 +1380,7 @@ function renderProducts() {
   });
 
   const grid = document.getElementById('productGrid');
+  grid.classList.remove('slide-in-right','slide-in-left');
   if (!list.length) { grid.innerHTML = `<div class='no-data' style='grid-column:1/-1'>${currentLang==='zh'?'找不到商品':'商品が見つかりません'}</div>`; return; }
 
   grid.innerHTML = list.map(p => {
@@ -1348,6 +1405,11 @@ function renderProducts() {
       </div>
     </div>`;
   }).join('');
+  if (slideDir === 'right') {
+    requestAnimationFrame(()=>grid.classList.add('slide-in-right'));
+  } else if (slideDir === 'left') {
+    requestAnimationFrame(()=>grid.classList.add('slide-in-left'));
+  }
 }
 
 function openTap(pid) {
@@ -2556,6 +2618,7 @@ function toggleLang() {
   currentLang = currentLang==='ja' ? 'zh' : 'ja';
   localStorage.setItem('fos_lang', currentLang);
   applyLang();
+  buildCategoryFilter();
 }
 function updateNavLabels() {
   const tabLabels = {
