@@ -48,7 +48,9 @@ body.lang-zh .sep { display:none !important; }
 
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{font-family:'Noto Sans JP','Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px}
+body{font-family:'Noto Sans JP','Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;overflow-x:hidden;width:100%}
+html,body,#mainApp,.page{max-width:100%;overflow-x:hidden;}
+.container,.order-layout,.order-layout>div,.product-grid,.product-card{min-width:0;max-width:100%;}
 
 /* ── CONFIG SCREEN ── */
 #configScreen{
@@ -251,7 +253,7 @@ body{font-family:'Noto Sans JP','Noto Sans SC',sans-serif;background:var(--bg);c
 .modal-overlay.active{display:flex;}
 .modal{
   background:white;border-radius:18px;padding:28px;
-  width:100%;max-width:520px;max-height:88vh;overflow-y:auto;
+  width:min(92vw,520px);max-width:520px;max-height:88vh;overflow-y:auto;
   box-shadow:var(--shadow-lg);animation:slideUp .2s ease;
 }
 .modal-lg{max-width:720px;}
@@ -385,8 +387,8 @@ tr:hover td{background:var(--bg);}
   border-bottom:1px solid rgba(0,0,0,.04);
 }
 .category-scroll{
-  display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
-  padding:2px 2px 8px;touch-action:pan-x;position:relative;z-index:2;
+  display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  padding:2px 2px 8px;touch-action:pan-x;overscroll-behavior-x:contain;position:relative;z-index:2;white-space:nowrap;
 }
 .category-scroll::-webkit-scrollbar{display:none;}
 .category-pill{
@@ -500,14 +502,20 @@ tr:hover td{background:var(--bg);}
   .order-item-header{padding:12px;}
   .section-header{margin-bottom:14px;}
   /* 商品列表底部留出折叠购物车的高度 */
-  #page-order .container{padding-bottom:88px;}
-  .product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
-  .product-name{font-size:13px;}
+  #page-order .container{padding-bottom:86px;overflow-x:hidden;}
+  .order-layout{gap:12px;}
+  .order-layout > div{min-width:0;}
+  .product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;}
+  .product-card{width:100%;min-width:0;}
+  .product-info{padding:9px 9px 11px;}
+  .product-name{font-size:13px;line-height:1.35;word-break:break-word;}
+  .product-name-zh{font-size:11px;}
+  .product-spec{font-size:11px;}
   .product-price{font-size:15px;}
   .product-stock{font-size:10px;}
   /* ★ 购物车 transform折叠方案 ★ */
   .cart-panel{
-    position:fixed;bottom:0;left:0;right:0;
+    position:fixed;bottom:0;left:0;right:0;width:100vw;
     border-radius:18px 18px 0 0;
     z-index:400;
     box-shadow:0 -4px 24px rgba(0,0,0,.2);
@@ -530,6 +538,9 @@ tr:hover td{background:var(--bg);}
   .cart-panel:not(.cart-open) #cartFooterContent{
     display:none;
   }
+  .cart-panel:not(.cart-open){pointer-events:none;}
+  .cart-panel:not(.cart-open) #cartTotalBar{pointer-events:auto;}
+  .cart-panel:not(.cart-open) .cart-header{pointer-events:none;}
   .cart-panel.cart-open .cart-body,
   .cart-panel.cart-open #cartFooterContent{
     display:block;
@@ -549,15 +560,16 @@ tr:hover td{background:var(--bg);}
   .lang-btn span{padding:3px 6px;font-size:11px;}
 
   /* Products */
-  .product-grid{grid-template-columns:repeat(2,1fr);gap:10px;}
+  .product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;}
+  .product-card{width:100%;min-width:0;}
   .product-img{font-size:40px;}
-  .product-name{font-size:13px;}
+  .product-name{font-size:13px;line-height:1.35;word-break:break-word;}
   .product-price{font-size:15px;}
   .product-stock{font-size:10px;}
 
   /* Cart (bottom drawer) */
   .cart-panel{border-radius:14px 14px 0 0;}
-  .cart-header{padding:11px 14px;font-size:14px;cursor:pointer;}
+  .cart-header{padding:11px 14px;font-size:14px;cursor:default;}
   .cart-panel{transform:translateY(calc(100% - 48px));}
   .cart-body{max-height:45vh;}
   .cart-footer{padding:12px;}
@@ -602,7 +614,8 @@ tr:hover td{background:var(--bg);}
   .search-bar{gap:8px;}
   .search-input{min-width:0;font-size:13px;}
   .filter-select{font-size:12px;padding:8px 10px;}
-  .category-strip{top:52px;margin-bottom:8px;padding-bottom:8px;background:var(--bg);z-index:700;}
+  .category-strip{top:52px;margin-bottom:8px;padding:0 0 8px;background:var(--bg);z-index:700;overflow:hidden;}
+  .category-scroll{padding-left:0;padding-right:0;}
   .category-pill{padding:10px 14px;font-size:16px;}
   .category-pill::after{left:14px;right:14px;height:3px;}
 
@@ -1375,12 +1388,12 @@ function syncCategoryTabPosition() {
   const active = tabsWrap.querySelector('.category-pill.active');
   if (!active) return;
   const activeIndex = buttons.indexOf(active);
-  const targetLeft = active.offsetLeft - (tabsWrap.clientWidth / 2) + (active.clientWidth / 2);
+  const maxLeft = Math.max(0, tabsWrap.scrollWidth - tabsWrap.clientWidth);
+  let targetLeft = 0;
   if (activeIndex >= 2) {
-    tabsWrap.scrollTo({ left: Math.max(0, targetLeft), behavior:'smooth' });
-  } else {
-    tabsWrap.scrollTo({ left: 0, behavior:'smooth' });
+    targetLeft = active.offsetLeft - (tabsWrap.clientWidth / 2) + (active.clientWidth / 2);
   }
+  tabsWrap.scrollTo({ left: Math.max(0, Math.min(maxLeft, targetLeft)), behavior:'smooth' });
 }
 
 
@@ -1392,6 +1405,22 @@ document.addEventListener('click', (e) => {
   e.stopPropagation();
   filterProductsCat(btn.dataset.cat || '');
 });
+
+(function setupCategoryTouchGuard(){
+  const tabs = document.getElementById('categoryTabs');
+  if (!tabs) return;
+  let startX = 0, startY = 0, movedX = 0, movedY = 0;
+  tabs.addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY; movedX = 0; movedY = 0;
+  }, {passive:true});
+  tabs.addEventListener('touchmove', (e) => {
+    const t = e.touches[0];
+    movedX = Math.abs(t.clientX - startX);
+    movedY = Math.abs(t.clientY - startY);
+    if (movedX > movedY) e.stopPropagation();
+  }, {passive:true});
+})();
 function renderProducts(slideDir = '') {
   const cart2 = getCart();
   let list = allProducts.filter(p => {
@@ -3029,9 +3058,28 @@ window.addEventListener('scroll', () => {
   });
 }, {passive:true});
 
+document.addEventListener('DOMContentLoaded', () => {
+  applyCartDrawerState();
+  const totalBar = document.getElementById('cartTotalBar');
+  let touchStartY = 0, touchMoveY = 0;
+  if (totalBar) {
+    totalBar.addEventListener('touchstart', (e) => {
+      touchStartY = e.touches[0].clientY;
+      touchMoveY = touchStartY;
+    }, {passive:true});
+    totalBar.addEventListener('touchmove', (e) => {
+      touchMoveY = e.touches[0].clientY;
+    }, {passive:true});
+    totalBar.addEventListener('touchend', () => {
+      if (Math.abs(touchMoveY - touchStartY) > 10) {
+        cartDrawerOpen = false;
+        applyCartDrawerState();
+      }
+    }, {passive:true});
+  }
+});
 window.addEventListener('resize', applyCartDrawerState);
 window.addEventListener('load', applyCartDrawerState);
-document.addEventListener('DOMContentLoaded', applyCartDrawerState);
 
 // Close modal overlay click
 document.querySelectorAll('.modal-overlay').forEach(el=>{
