@@ -323,7 +323,9 @@ tr:hover td{background:var(--bg);}
   background:var(--red);color:white;padding:13px 16px;
   font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;
 }
-.cart-body{max-height:calc(100vh - 320px);overflow-y:auto;}
+.cart-body{max-height:calc(100vh - 320px);overflow-y:auto;display:block !important;}
+/* Desktop cart footer always visible */
+@media(min-width:801px){#cartFooterContent{display:block !important;} #cartExpandHint{display:none !important;} #cartTotalBar{display:none !important;}}
 .cart-item{
   display:flex;align-items:center;gap:10px;
   padding:11px 14px;border-bottom:1px solid var(--bg2);
@@ -440,7 +442,9 @@ tr:hover td{background:var(--bg);}
     border-radius:18px 18px 0 0;z-index:500;
     box-shadow:0 -4px 24px rgba(0,0,0,.18);
   }
-  .cart-body{max-height:38vh;}
+  /* Default collapsed on mobile - JS will manage open state */
+  .cart-body{max-height:38vh;display:none;}
+  #cartFooterContent{display:none;}
   .product-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;}
   .form-row{grid-template-columns:1fr;}
   .stats-grid{grid-template-columns:1fr 1fr;}
@@ -473,8 +477,10 @@ tr:hover td{background:var(--bg);}
   /* Cart (bottom drawer) */
   .cart-panel{border-radius:14px 14px 0 0;}
   .cart-header{padding:11px 14px;font-size:14px;cursor:pointer;}
-  .cart-body{max-height:40vh;}
+  .cart-body{max-height:45vh;}
   .cart-footer{padding:12px;}
+  /* Total bar always visible on mobile */
+  #cartTotalBar{padding:10px 14px;}
   .cart-total-big{font-size:18px;}
   .cart-item-name{font-size:12px;}
   .cart-item-sub{font-size:11px;}
@@ -644,7 +650,7 @@ tr:hover td{background:var(--bg);}
             <div class="cart-header" onclick="toggleCartDrawer()" id="cartHeaderEl" style="cursor:pointer;">
             🛒 <span class="ja">カート</span><span class="sep"> / </span><span class="zh">购物车</span>
             <span id="cartCount" style="background:rgba(255,255,255,.25);border-radius:20px;padding:2px 10px;font-size:12px;margin-left:auto;"></span>
-            <span id="cartDrawerArrow" style="font-size:12px;opacity:0.8;transition:transform .2s;">▲</span>
+            <span id="cartDrawerArrow" style="font-size:12px;opacity:0.8;transition:transform .2s;">▼</span>
           </div>
             <div class="cart-body" id="cartBody"><div class="cart-empty"><span class="ja">商品をタップして追加</span><br><span class="zh">点击商品加入购物车</span></div></div>
             <!-- Always-visible total bar (shown even when cart collapsed on mobile) -->
@@ -1104,7 +1110,7 @@ function switchTab(id) {
 }
 
 function onTabActivate(id) {
-  if (id==='order') { loadProducts(); renderCutoffBanner(); checkReceiptRequired(); }
+  if (id==='order') { loadProducts(); renderCutoffBanner(); checkReceiptRequired(); setTimeout(_applyCartDrawer, 50); }
   if (id==='order-history') { renderOrderHistory(); }
   if (id==='factory-orders') { renderFactoryOrders(); }
   if (id==='factory-products') { renderProductTable(); }
@@ -2660,6 +2666,8 @@ function openCartDrawer() {
 }
 // Init on load
 window.addEventListener('resize', _applyCartDrawer);
+// Apply on initial load too
+window.addEventListener('load', () => { setTimeout(_applyCartDrawer, 100); });
 
 // Close modal overlay click
 document.querySelectorAll('.modal-overlay').forEach(el=>{
