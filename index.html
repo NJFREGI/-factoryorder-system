@@ -473,6 +473,15 @@ tr:hover td{background:var(--bg);}
   #cartTotalBar{display:flex !important;padding:10px 16px;border-top:1px solid var(--border);cursor:pointer;}
   #cartExpandHint{font-size:11px;color:var(--text3);}
   .cart-header{cursor:pointer;}
+  /* 默认收起时，只显示头部+合计条，避免遮住菜单 */
+  .cart-panel:not(.cart-open) .cart-body,
+  .cart-panel:not(.cart-open) #cartFooterContent{
+    display:none;
+  }
+  .cart-panel.cart-open .cart-body,
+  .cart-panel.cart-open #cartFooterContent{
+    display:block;
+  }
 }
 
 
@@ -1134,7 +1143,7 @@ const roleTabs = {
 function initMainUI() {
   applyLang();
   cartDrawerOpen = false;
-  setTimeout(_applyCartDrawer, 100);
+  setTimeout(applyCartDrawerState, 100);
   const tabs = roleTabs[currentUser.role];
   document.getElementById('navTabs').innerHTML = tabs.map(t =>
     `<div class="nav-tab" onclick="switchTab('${t.id}')">${t.label}</div>`
@@ -1155,7 +1164,12 @@ function switchTab(id) {
 }
 
 function onTabActivate(id) {
-  if (id==='order') { loadProducts(); renderCutoffBanner(); checkReceiptRequired(); cartDrawerOpen=false; const p=document.getElementById('cartPanel');if(p)p.classList.remove('cart-open'); }
+  if (id==='order') {
+    loadProducts();
+    renderCutoffBanner();
+    checkReceiptRequired();
+    closeCartDrawer();
+  }
   if (id==='order-history') { renderOrderHistory(); }
   if (id==='factory-orders') { renderFactoryOrders(); }
   if (id==='factory-products') { renderProductTable(); }
@@ -1319,6 +1333,7 @@ function renderCart() {
     document.getElementById('cartBody').innerHTML = '<div class="cart-empty"><span class="ja">商品をタップして追加</span><br><span class="zh">点击商品加入购物车</span></div>';
     ['cartSubtotal','cartTaxAmt','cartTotal'].forEach(id=>document.getElementById(id).textContent='¥0');
     countEl.textContent = '';
+    closeCartDrawer();
     return;
   }
   let sub=0, tax=0;
@@ -2814,36 +2829,45 @@ async function exportSummaryPDF() {
 
 // ── 购物车折叠/展开 - transform方案 ──
 let cartDrawerOpen = false;
-function toggleCartDrawer() {
-  const isMobile = window.innerWidth <= 800;
-  if (!isMobile) return;
-  cartDrawerOpen = !cartDrawerOpen;
+
+function applyCartDrawerState() {
   const panel = document.getElementById('cartPanel');
-  if (panel) {
-    if (cartDrawerOpen) panel.classList.add('cart-open');
-    else panel.classList.remove('cart-open');
-  }
   const arrow = document.getElementById('cartDrawerArrow');
-  if (arrow) arrow.textContent = cartDrawerOpen ? '▲' : '▼';
   const hint = document.getElementById('cartExpandHint');
+  if (!panel) return;
+
+  if (window.innerWidth > 800) {
+    panel.classList.remove('cart-open');
+    if (arrow) arrow.textContent = '▼';
+    if (hint) hint.style.opacity = '0';
+    return;
+  }
+
+  panel.classList.toggle('cart-open', cartDrawerOpen);
+  if (arrow) arrow.textContent = cartDrawerOpen ? '▲' : '▼';
   if (hint) hint.style.opacity = cartDrawerOpen ? '0' : '1';
 }
+
+function toggleCartDrawer() {
+  if (window.innerWidth > 800) return;
+  cartDrawerOpen = !cartDrawerOpen;
+  applyCartDrawerState();
+}
+
 function openCartDrawer() {
   if (window.innerWidth > 800) return;
-  if (cartDrawerOpen) return;
   cartDrawerOpen = true;
-  const panel = document.getElementById('cartPanel');
-  if (panel) panel.classList.add('cart-open');
-  const arrow = document.getElementById('cartDrawerArrow');
-  if (arrow) arrow.textContent = '▲';
+  applyCartDrawerState();
 }
-window.addEventListener('resize', () => {
-  if (window.innerWidth > 800) {
-    const panel = document.getElementById('cartPanel');
-    if (panel) panel.classList.remove('cart-open');
-    cartDrawerOpen = false;
-  }
-});
+
+function closeCartDrawer() {
+  cartDrawerOpen = false;
+  applyCartDrawerState();
+}
+
+window.addEventListener('resize', applyCartDrawerState);
+window.addEventListener('load', applyCartDrawerState);
+document.addEventListener('DOMContentLoaded', applyCartDrawerState);
 
 // Close modal overlay click
 document.querySelectorAll('.modal-overlay').forEach(el=>{
