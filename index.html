@@ -48,7 +48,9 @@ body.lang-zh .sep { display:none !important; }
 
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{font-family:'Noto Sans JP','Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px}
+body{font-family:'Noto Sans JP','Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;overflow-x:hidden;width:100%}
+html,body,#mainApp,.page{max-width:100%;overflow-x:hidden;}
+.container,.order-layout,.order-layout>div,.product-grid,.product-card{min-width:0;max-width:100%;}
 
 /* ── CONFIG SCREEN ── */
 #configScreen{
@@ -251,7 +253,7 @@ body{font-family:'Noto Sans JP','Noto Sans SC',sans-serif;background:var(--bg);c
 .modal-overlay.active{display:flex;}
 .modal{
   background:white;border-radius:18px;padding:28px;
-  width:100%;max-width:520px;max-height:88vh;overflow-y:auto;
+  width:min(92vw,520px);max-width:520px;max-height:88vh;overflow-y:auto;
   box-shadow:var(--shadow-lg);animation:slideUp .2s ease;
 }
 .modal-lg{max-width:720px;}
@@ -368,7 +370,7 @@ tr:hover td{background:var(--bg);}
 .cutoff-time-big{font-size:28px;font-weight:900;font-variant-numeric:tabular-nums;}
 
 /* SEARCH */
-.search-bar{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+.search-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
 .search-input{
   flex:1;min-width:180px;padding:10px 16px;border:2px solid var(--border);
   border-radius:var(--r-sm);font-size:14px;font-family:inherit;
@@ -380,6 +382,46 @@ tr:hover td{background:var(--bg);}
   font-size:13px;font-family:inherit;background:white;cursor:pointer;
 }
 .filter-select:focus{outline:none;border-color:var(--red);}
+.category-strip{
+  position:sticky;top:58px;z-index:260;background:var(--bg);padding:0 0 10px;margin-bottom:10px;
+  border-bottom:1px solid rgba(0,0,0,.04);
+  box-shadow:0 1px 0 rgba(0,0,0,.04);
+}
+.category-strip-inner{width:100%;max-width:100%;}
+.category-scroll{
+  display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  padding:2px 2px 8px;touch-action:pan-x;overscroll-behavior-x:contain;position:relative;z-index:2;white-space:nowrap;
+}
+.category-scroll::-webkit-scrollbar{display:none;}
+.category-pill{
+  position:relative;flex:0 0 auto;padding:12px 18px;border:none;background:transparent;color:var(--text2);
+  font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;
+  -webkit-tap-highlight-color:transparent;
+}
+.category-pill::after{
+  content:'';position:absolute;left:18px;right:18px;bottom:0;height:4px;border-radius:999px;background:transparent;
+  transition:all .22s ease;
+}
+.category-pill.active{color:var(--red);}
+.category-pill.active::after{background:var(--red);}
+.modal-product-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
+.category-strip.is-fixed-mobile{
+  position:fixed !important;
+  left:var(--category-fixed-left, 0px);
+  top:var(--category-fixed-top, 52px);
+  width:var(--category-fixed-width, 100vw);
+  z-index:320;
+  margin:0;
+  padding:0 0 8px;
+  background:var(--bg);
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+.category-strip-placeholder{display:none;height:0;}
+.category-strip-placeholder.active{display:block;height:var(--category-placeholder-height, 56px);}
+.product-grid.slide-in-right{animation:slideInRight .24s ease;}
+.product-grid.slide-in-left{animation:slideInLeft .24s ease;}
+@keyframes slideInRight{from{opacity:.35;transform:translateX(32px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideInLeft{from{opacity:.35;transform:translateX(-32px)}to{opacity:1;transform:translateX(0)}}
 
 /* ORDER LIST ITEM */
 .order-item{
@@ -431,6 +473,31 @@ tr:hover td{background:var(--bg);}
 /* SIGNATURE PAD */
 #sigCanvas{border:2px dashed var(--border);border-radius:var(--r-sm);cursor:crosshair;touch-action:none;width:100%;height:120px;background:#fcfcfc;}
 
+
+.success-icon-wrap{display:flex;justify-content:center;margin:6px 0 14px;}
+.success-icon{
+  width:84px;height:84px;border-radius:50%;
+  background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);
+  color:var(--red);display:flex;align-items:center;justify-content:center;
+  font-size:42px;box-shadow:inset 0 0 0 1px rgba(37,99,235,.12);
+}
+.success-title{font-size:22px;font-weight:900;text-align:center;color:var(--text);margin-bottom:8px;}
+.success-subtitle{font-size:13px;color:var(--text2);text-align:center;line-height:1.8;margin-bottom:18px;}
+.success-order-box{
+  background:linear-gradient(135deg,#f8fafc 0%,#eff6ff 100%);
+  border:1px solid #dbeafe;border-radius:16px;padding:16px 18px;margin-bottom:16px;
+}
+.success-order-no{font-size:13px;color:var(--text2);margin-bottom:6px;text-align:center;}
+.success-order-no strong{font-size:28px;color:var(--red);display:block;line-height:1.2;}
+.success-list{display:grid;gap:10px;margin-top:10px;}
+.success-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;font-size:13px;}
+.success-row .label{color:var(--text2);}
+.success-row .value{color:var(--text);font-weight:700;text-align:right;}
+.success-note{
+  background:#fffbeb;border:1px solid #fde68a;color:#92400e;
+  border-radius:12px;padding:12px 14px;font-size:12px;line-height:1.75;margin-bottom:18px;
+}
+
 /* MISC */
 .divider{height:1px;background:var(--border);margin:18px 0;}
 .no-data{padding:52px;text-align:center;color:var(--text3);font-size:15px;}
@@ -451,13 +518,22 @@ tr:hover td{background:var(--bg);}
   .order-item-header{padding:12px;}
   .section-header{margin-bottom:14px;}
   /* 商品列表底部留出折叠购物车的高度 */
-  #page-order .container{padding-bottom:80px;}
-  .product-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;}
+  #page-order .container{padding-bottom:86px;overflow-x:hidden;}
+  .order-layout{gap:12px;}
+  .order-layout > div{min-width:0;}
+  .product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;}
+  .product-card{width:100%;min-width:0;}
+  .product-info{padding:9px 9px 11px;}
+  .product-name{font-size:13px;line-height:1.35;word-break:break-word;}
+  .product-name-zh{font-size:11px;}
+  .product-spec{font-size:11px;}
+  .product-price{font-size:15px;}
+  .product-stock{font-size:10px;}
   /* ★ 购物车 transform折叠方案 ★ */
   .cart-panel{
-    position:fixed;bottom:0;left:0;right:0;
+    position:fixed;bottom:0;left:0;right:0;width:100vw;
     border-radius:18px 18px 0 0;
-    z-index:400;
+    z-index:650;
     box-shadow:0 -4px 24px rgba(0,0,0,.2);
     transition:transform 0.28s cubic-bezier(0.4,0,0.2,1);
     transform:translateY(calc(100% - 52px));
@@ -473,6 +549,18 @@ tr:hover td{background:var(--bg);}
   #cartTotalBar{display:flex !important;padding:10px 16px;border-top:1px solid var(--border);cursor:pointer;}
   #cartExpandHint{font-size:11px;color:var(--text3);}
   .cart-header{cursor:pointer;}
+  /* 默认收起时，只显示头部+合计条，避免遮住菜单 */
+  .cart-panel:not(.cart-open) .cart-body,
+  .cart-panel:not(.cart-open) #cartFooterContent{
+    display:none;
+  }
+  .cart-panel:not(.cart-open){pointer-events:none;}
+  .cart-panel:not(.cart-open) #cartTotalBar{pointer-events:auto;}
+  .cart-panel:not(.cart-open) .cart-header{pointer-events:auto;}
+  .cart-panel.cart-open .cart-body,
+  .cart-panel.cart-open #cartFooterContent{
+    display:block;
+  }
 }
 
 
@@ -488,15 +576,16 @@ tr:hover td{background:var(--bg);}
   .lang-btn span{padding:3px 6px;font-size:11px;}
 
   /* Products */
-  .product-grid{grid-template-columns:repeat(2,1fr);gap:10px;}
+  .product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;}
+  .product-card{width:100%;min-width:0;}
   .product-img{font-size:40px;}
-  .product-name{font-size:13px;}
+  .product-name{font-size:13px;line-height:1.35;word-break:break-word;}
   .product-price{font-size:15px;}
   .product-stock{font-size:10px;}
 
   /* Cart (bottom drawer) */
   .cart-panel{border-radius:14px 14px 0 0;}
-  .cart-header{padding:11px 14px;font-size:14px;cursor:pointer;}
+  .cart-header{padding:11px 14px;font-size:14px;cursor:default;}
   .cart-panel{transform:translateY(calc(100% - 48px));}
   .cart-body{max-height:45vh;}
   .cart-footer{padding:12px;}
@@ -541,6 +630,15 @@ tr:hover td{background:var(--bg);}
   .search-bar{gap:8px;}
   .search-input{min-width:0;font-size:13px;}
   .filter-select{font-size:12px;padding:8px 10px;}
+  .category-strip{top:52px;margin-bottom:8px;padding:0 0 8px;background:var(--bg);z-index:260;overflow:hidden;position:sticky;}
+  #page-order, #page-order .container{overflow:visible !important;}
+  body{overflow-x:hidden;}
+  html{overflow-x:hidden;}
+  .category-scroll{padding-left:0;padding-right:0;}
+  .category-pill{padding:10px 14px;font-size:16px;}
+  .category-pill::after{left:14px;right:14px;height:3px;}
+  .modal-product-actions{justify-content:space-between;}
+  .modal-product-actions .btn{flex:1;justify-content:center;}
 
   /* Stats */
   .stats-grid{grid-template-columns:1fr 1fr;gap:10px;}
@@ -660,15 +758,21 @@ tr:hover td{background:var(--bg);}
           </div>
           <div class="search-bar">
             <input class="search-input" placeholder="🔍 商品名検索 / 搜索商品..." data-ph-ja="🔍 商品名検索..." data-ph-zh="🔍 搜索商品..." oninput="filterProducts(this.value)" id="productSearch">
-            <select class="filter-select" id="catFilter" onchange="filterProductsCat(this.value)">
+            <select class="filter-select" id="catFilter" onchange="filterProductsCat(this.value)" style="display:none;">
               <option value="" id="catFilterAll"><span class="ja">全カテゴリ</span><span class="sep"> / </span><span class="zh">全部</span></option>
             </select>
           </div>
+          <div class="category-strip" id="categoryStrip">
+            <div class="category-strip-inner">
+              <div class="category-scroll" id="categoryTabs"></div>
+            </div>
+          </div>
+          <div class="category-strip-placeholder" id="categoryStripPlaceholder"></div>
           <div class="product-grid" id="productGrid"></div>
         </div>
         <div>
           <div class="cart-panel" id="cartPanel">
-            <div class="cart-header" id="cartHeaderEl" onclick="toggleCartDrawer()" style="cursor:pointer;">
+            <div class="cart-header" id="cartHeaderEl" onclick="toggleCartDrawer()">
             🛒 <span class="ja">カート</span><span class="zh">购物车</span>
             <span id="cartCount" style="background:rgba(255,255,255,.25);border-radius:20px;padding:2px 10px;font-size:12px;margin-left:auto;"></span>
             <span id="cartDrawerArrow" style="font-size:14px;opacity:0.8;">▼</span>
@@ -883,29 +987,24 @@ tr:hover td{background:var(--bg);}
       <div class="form-group"><label class="form-label">絵文字 / Emoji</label><input class="form-input" id="pEmoji" placeholder="🥩" maxlength="4"></div>
     </div>
     <div class="form-group">
-      <label class="form-label"><span class="ja">商品画像</span><span class="sep"> / </span><span class="zh">商品图片</span></label>
-      <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:8px">
-        <div id="pImgPreview" style="width:80px;height:80px;border:2px dashed var(--border);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:32px;background:var(--bg);flex-shrink:0;overflow:hidden">📷</div>
-        <div style="flex:1">
-          <label style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:var(--P,#2563EB);color:white;border-radius:var(--r-sm);cursor:pointer;font-size:13px;font-weight:600;margin-bottom:6px;font-family:inherit">
-            📁 <span class="ja">画像を選択</span><span class="zh">选择图片</span>
-            <input type="file" id="pImageFile" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" onchange="previewImg(this)">
-          </label>
-          <div style="font-size:11px;color:var(--text3)"><span class="ja">JPG/PNG/WebP, 5MB以内</span><span class="zh">JPG/PNG/WebP, 5MB以内</span></div>
-          <div id="pUploadStatus" style="font-size:12px;margin-top:4px"></div>
-        </div>
+      <label class="form-label"><span class="ja">画像URL（任意）</span><span class="sep"> / </span><span class="zh">图片URL（任意）</span></label>
+      <input class="form-input" id="pImage" placeholder="https://...">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;">
+        <input type="file" id="pImageFile" accept="image/*" style="display:none;" onchange="handleProductImageUpload(event)">
+        <button type="button" class="btn btn-outline btn-sm" id="uploadImageBtn" onclick="document.getElementById('pImageFile').click()">📤 <span class="ja">画像をアップロード</span><span class="sep"> / </span><span class="zh">上传图片</span></button>
+        <span id="pImageUploadStatus" style="font-size:12px;color:var(--text3);"></span>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:5px"><span class="ja">または画像URLを入力 / </span><span class="zh">或直接输入图片URL</span></div>
-      <input class="form-input" id="pImage" placeholder="https://..." style="font-size:13px">
+      <div class="form-hint"><span class="ja">Supabase Storage の product-images バケットへ直接アップロードします</span><span class="sep"> / </span><span class="zh">将直接上传到 Supabase Storage 的 product-images 存储桶</span></div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">
       <label class="toggle"><input type="checkbox" id="pActive"><span class="toggle-sl"></span></label>
       <span style="font-size:13px;color:var(--text2);"><span class="ja">公開中</span><span class="sep"> / </span><span class="zh">上架中</span></span>
     </div>
     <div class="divider"></div>
-    <div class="flex gap-8" style="justify-content:flex-end;">
+    <div class="modal-product-actions">
       <button class="btn btn-outline" onclick="closeModal('modalProduct')"><span class="ja">キャンセル</span><span class="zh">取消</span></button>
-      <button class="btn btn-red" onclick="saveProduct()"><span class="ja">保存</span><span class="sep"> / </span><span class="zh">保存</span></button>
+      <button class="btn btn-blue" id="saveAndContinueBtn" onclick="saveProduct(true)"><span class="ja">保存して続けて追加</span><span class="sep"> / </span><span class="zh">保存并继续添加</span></button>
+      <button class="btn btn-red" onclick="saveProduct(false)"><span class="ja">保存</span><span class="sep"> / </span><span class="zh">保存</span></button>
     </div>
   </div>
 </div>
@@ -941,6 +1040,26 @@ tr:hover td{background:var(--bg);}
       </div>
       <button class="btn btn-red btn-lg" style="width:100%;justify-content:center;" onclick="tapAddCart()">🛒 <span class="ja">カートに追加</span><span class="sep"> / </span><span class="zh">加入购物车</span></button>
     </div>
+  </div>
+</div>
+
+
+<!-- Order Success Modal -->
+<div class="modal-overlay" id="modalOrderSuccess">
+  <div class="modal" style="max-width:420px;">
+    <div class="success-icon-wrap"><div class="success-icon">✓</div></div>
+    <div class="success-title" id="orderSuccessTitle"></div>
+    <div class="success-subtitle" id="orderSuccessSubtitle"></div>
+    <div class="success-order-box">
+      <div class="success-order-no" id="orderSuccessNo"></div>
+      <div class="success-list">
+        <div class="success-row"><span class="label" id="orderSuccessTypeLabel"></span><span class="value" id="orderSuccessType"></span></div>
+        <div class="success-row"><span class="label" id="orderSuccessDateLabel"></span><span class="value" id="orderSuccessDate"></span></div>
+        <div class="success-row"><span class="label" id="orderSuccessTotalLabel"></span><span class="value" id="orderSuccessTotal"></span></div>
+      </div>
+    </div>
+    <div class="success-note" id="orderSuccessNote"></div>
+    <button class="btn btn-red btn-lg" style="width:100%;justify-content:center;" onclick="closeModal('modalOrderSuccess')" id="orderSuccessBtn"></button>
   </div>
 </div>
 
@@ -1047,6 +1166,28 @@ function hideLoading() { document.getElementById('loadingOverlay').style.display
 
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+function showOrderSuccessModal({orderNo,total,merged=false,orderDate=''}) {
+  document.getElementById('orderSuccessTitle').textContent = currentLang==='zh' ? '下单成功' : 'ご注文を受け付けました';
+  document.getElementById('orderSuccessSubtitle').textContent = merged
+    ? (currentLang==='zh' ? '商品已追加到今天的订单中。' : '本日のご注文に商品を追加しました。')
+    : (currentLang==='zh' ? '订单已正式提交，我们会尽快为您安排处理。' : 'ご注文を正式に送信しました。順次手配いたします。');
+  document.getElementById('orderSuccessNo').innerHTML = (currentLang==='zh' ? '订单编号' : '注文番号') + `<strong>#${orderNo||'-'}</strong>`;
+  document.getElementById('orderSuccessTypeLabel').textContent = currentLang==='zh' ? '处理结果' : '処理結果';
+  document.getElementById('orderSuccessType').textContent = merged
+    ? (currentLang==='zh' ? '已合并到当日订单' : '当日注文へ追加済み')
+    : (currentLang==='zh' ? '新订单已创建' : '新規注文を作成');
+  document.getElementById('orderSuccessDateLabel').textContent = currentLang==='zh' ? '订货日期' : '注文日';
+  document.getElementById('orderSuccessDate').textContent = orderDate || '-';
+  document.getElementById('orderSuccessTotalLabel').textContent = currentLang==='zh' ? '订单金额' : 'ご注文金額';
+  document.getElementById('orderSuccessTotal').textContent = fmt(total || 0) + (currentLang==='zh' ? '（含税）' : '（税込）');
+  document.getElementById('orderSuccessNote').textContent = merged
+    ? (currentLang==='zh' ? '系统已自动并入同一天的待处理订单，便于工厂统一备货与配送。' : '同日の未処理注文へ自動でまとめました。工場側でまとめて手配されます。')
+    : (currentLang==='zh' ? '感谢您的订购。若需修改数量或补充备注，请在工厂确认前尽快联系。' : 'ご注文ありがとうございます。数量変更や備考追加が必要な場合は、工場確認前にお早めにご連絡ください。');
+  document.getElementById('orderSuccessBtn').textContent = currentLang==='zh' ? '我知道了' : '閉じる';
+  openModal('modalOrderSuccess');
+}
+
 document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('active'); });
 });
@@ -1149,13 +1290,14 @@ const roleTabs = {
 function initMainUI() {
   applyLang();
   cartDrawerOpen = false;
-  setTimeout(_applyCartDrawer, 100);
+  setTimeout(applyCartDrawerState, 100);
   const tabs = roleTabs[currentUser.role];
   document.getElementById('navTabs').innerHTML = tabs.map(t =>
     `<div class="nav-tab" onclick="switchTab('${t.id}')">${t.label}</div>`
   ).join('');
   document.getElementById('navUser').innerHTML = `<span class="ja">ログイン中:</span><span class="sep"> / </span><span class="zh">登录中:</span> <strong>${currentUser.name}</strong>`;
   switchTab(tabs[0].id);
+  setTimeout(syncMobileCategorySticky, 0);
 }
 
 function switchTab(id) {
@@ -1170,7 +1312,12 @@ function switchTab(id) {
 }
 
 function onTabActivate(id) {
-  if (id==='order') { loadProducts(); renderCutoffBanner(); checkReceiptRequired(); cartDrawerOpen=false; const p=document.getElementById('cartPanel');if(p)p.classList.remove('cart-open'); }
+  if (id==='order') {
+    loadProducts();
+    renderCutoffBanner();
+    checkReceiptRequired();
+    closeCartDrawer();
+  }
   if (id==='order-history') { renderOrderHistory(); }
   if (id==='factory-orders') { renderFactoryOrders(); }
   if (id==='factory-products') { renderProductTable(); }
@@ -1221,6 +1368,7 @@ async function saveCutoffTime() {
 let allProducts = [];
 let searchTerm = '';
 let catFilter = '';
+let lastCatFilter = '';
 let tapProduct = null, tapQtyVal = 1;
 
 async function loadProducts() {
@@ -1238,17 +1386,77 @@ async function loadProducts() {
 }
 
 function buildCategoryFilter() {
-  const cats = [...new Set(allProducts.map(p=>p.category))];
+  const cats = [...new Set(allProducts.map(p=>p.category).filter(Boolean))];
   const el = document.getElementById('catFilter');
   el.innerHTML = '<option value=""><span class="ja">全カテゴリ</span><span class="sep"> / </span><span class="zh">全部</span></option>' +
     cats.map(c=>`<option value="${c}">${c}</option>`).join('');
   if (catFilter) el.value = catFilter;
+
+  const tabs = document.getElementById('categoryTabs');
+  const allLabel = currentLang==='zh' ? '全部' : 'すべて';
+  tabs.innerHTML = `<button type="button" class="category-pill ${!catFilter?'active':''}" data-cat="">${allLabel}</button>` +
+    cats.map(c=>`<button type="button" class="category-pill ${catFilter===c?'active':''}" data-cat="${String(c).replace(/"/g,'&quot;')}">${c}</button>`).join('');
+  syncCategoryTabPosition();
 }
 
 function filterProducts(v) { searchTerm = v; renderProducts(); }
-function filterProductsCat(v) { catFilter = v; renderProducts(); }
+function filterProductsCat(v) {
+  const nextCat = v || '';
+  const prevCats = ['', ...new Set(allProducts.map(p=>p.category).filter(Boolean))];
+  const prevIndex = prevCats.indexOf(catFilter||'');
+  const nextIndex = prevCats.indexOf(nextCat);
+  lastCatFilter = catFilter || '';
+  catFilter = nextCat;
+  const sel = document.getElementById('catFilter');
+  if (sel) sel.value = catFilter;
+  renderProducts(nextIndex >= prevIndex ? 'right' : 'left');
+  syncCategoryTabPosition();
+}
 
-function renderProducts() {
+function syncCategoryTabPosition() {
+  const tabsWrap = document.getElementById('categoryTabs');
+  if (!tabsWrap) return;
+  const buttons = [...tabsWrap.querySelectorAll('.category-pill')];
+  buttons.forEach(btn => {
+    btn.classList.toggle('active', (btn.dataset.cat||'') === (catFilter||''));
+  });
+  const active = tabsWrap.querySelector('.category-pill.active');
+  if (!active) return;
+  const activeIndex = buttons.indexOf(active);
+  const maxLeft = Math.max(0, tabsWrap.scrollWidth - tabsWrap.clientWidth);
+  let targetLeft = 0;
+  if (activeIndex >= 2) {
+    targetLeft = active.offsetLeft - (tabsWrap.clientWidth / 2) + (active.clientWidth / 2);
+  }
+  tabsWrap.scrollTo({ left: Math.max(0, Math.min(maxLeft, targetLeft)), behavior:'smooth' });
+}
+
+
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('#categoryTabs .category-pill');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  filterProductsCat(btn.dataset.cat || '');
+});
+
+(function setupCategoryTouchGuard(){
+  const tabs = document.getElementById('categoryTabs');
+  if (!tabs) return;
+  let startX = 0, startY = 0, movedX = 0, movedY = 0;
+  tabs.addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY; movedX = 0; movedY = 0;
+  }, {passive:true});
+  tabs.addEventListener('touchmove', (e) => {
+    const t = e.touches[0];
+    movedX = Math.abs(t.clientX - startX);
+    movedY = Math.abs(t.clientY - startY);
+    if (movedX > movedY) e.stopPropagation();
+  }, {passive:true});
+})();
+function renderProducts(slideDir = '') {
   const cart2 = getCart();
   let list = allProducts.filter(p => {
     const q = searchTerm.toLowerCase();
@@ -1258,6 +1466,7 @@ function renderProducts() {
   });
 
   const grid = document.getElementById('productGrid');
+  grid.classList.remove('slide-in-right','slide-in-left');
   if (!list.length) { grid.innerHTML = `<div class='no-data' style='grid-column:1/-1'>${currentLang==='zh'?'找不到商品':'商品が見つかりません'}</div>`; return; }
 
   grid.innerHTML = list.map(p => {
@@ -1282,6 +1491,11 @@ function renderProducts() {
       </div>
     </div>`;
   }).join('');
+  if (slideDir === 'right') {
+    requestAnimationFrame(()=>grid.classList.add('slide-in-right'));
+  } else if (slideDir === 'left') {
+    requestAnimationFrame(()=>grid.classList.add('slide-in-left'));
+  }
 }
 
 function openTap(pid) {
@@ -1293,7 +1507,7 @@ function openTap(pid) {
   document.getElementById('tapNameZh').textContent = tapProduct.name_zh || '';
   document.getElementById('tapSpec').textContent = tapProduct.spec;
   document.getElementById('tapPrice').textContent = `${fmt(Math.round(tapProduct.price*(1+tapProduct.tax_rate/100)))}（税込） / ${fmt(tapProduct.price)}（税抜）`;
-  document.getElementById('tapStock').textContent = `<span class="ja">在庫</span><span class="sep"> / </span><span class="zh">库存</span>: ${tapProduct.stock}`;
+  document.getElementById('tapStock').innerHTML = `<span class="ja">在庫</span><span class="sep"> / </span><span class="zh">库存</span>: ${tapProduct.stock}`;
   document.getElementById('tapQtyVal').textContent = tapQtyVal;
   openModal('modalTap');
 }
@@ -1317,8 +1531,68 @@ function tapAddCart() {
   closeModal('modalTap');
   renderProducts();
   renderCart();
-  openCartDrawer();
 }
+
+let categoryStickyTicking = false;
+function syncMobileCategorySticky(force = false) {
+  const strip = document.getElementById('categoryStrip');
+  const placeholder = document.getElementById('categoryStripPlaceholder');
+  const pageOrder = document.getElementById('page-order');
+  const cartPanel = document.getElementById('cartPanel');
+  if (!strip || !placeholder || !pageOrder) return;
+
+  const run = () => {
+    categoryStickyTicking = false;
+    const nav = document.querySelector('.top-nav');
+    const navH = nav ? Math.round(nav.getBoundingClientRect().height || nav.offsetHeight || 52) : 52;
+    strip.style.top = navH + 'px';
+    strip.style.setProperty('--category-fixed-top', navH + 'px');
+
+    const isMobile = window.innerWidth <= 800 && pageOrder.classList.contains('active');
+    const cartOpenNow = !!(cartPanel && cartPanel.classList.contains('cart-open'));
+    const parent = strip.parentElement;
+
+    document.body.classList.toggle('cart-open-mobile', cartOpenNow && window.innerWidth <= 800);
+
+    if (!isMobile || !parent || cartOpenNow) {
+      strip.classList.remove('is-fixed-mobile');
+      placeholder.classList.remove('active');
+      placeholder.style.height = '0px';
+      return;
+    }
+
+    const parentRect = parent.getBoundingClientRect();
+    const isFixed = strip.classList.contains('is-fixed-mobile');
+    const stripRect = strip.getBoundingClientRect();
+    const placeholderRect = placeholder.getBoundingClientRect();
+    const fixThreshold = navH + 1;
+    const releaseThreshold = navH + 12;
+    const shouldFix = isFixed ? (placeholderRect.top <= releaseThreshold) : (stripRect.top <= fixThreshold);
+
+    if (shouldFix) {
+      const width = Math.min(parentRect.width, window.innerWidth);
+      strip.style.setProperty('--category-fixed-left', Math.max(0, parentRect.left) + 'px');
+      strip.style.setProperty('--category-fixed-width', width + 'px');
+      strip.style.setProperty('--category-placeholder-height', strip.offsetHeight + 'px');
+      placeholder.style.height = strip.offsetHeight + 'px';
+      placeholder.classList.add('active');
+      strip.classList.add('is-fixed-mobile');
+    } else {
+      strip.classList.remove('is-fixed-mobile');
+      placeholder.classList.remove('active');
+      placeholder.style.height = '0px';
+    }
+  };
+
+  if (force) {
+    run();
+    return;
+  }
+  if (categoryStickyTicking) return;
+  categoryStickyTicking = true;
+  requestAnimationFrame(run);
+}
+
 
 // ═══════════════════════════════════════════════
 // CART (localStorage)
@@ -1334,6 +1608,7 @@ function renderCart() {
     document.getElementById('cartBody').innerHTML = '<div class="cart-empty"><span class="ja">商品をタップして追加</span><br><span class="zh">点击商品加入购物车</span></div>';
     ['cartSubtotal','cartTaxAmt','cartTotal'].forEach(id=>document.getElementById(id).textContent='¥0');
     countEl.textContent = '';
+    closeCartDrawer();
     return;
   }
   let sub=0, tax=0;
@@ -1799,6 +2074,7 @@ async function saveOrderEdit(orderId, itemCount) {
 // PRODUCT MANAGEMENT (FACTORY)
 // ═══════════════════════════════════════════════
 let editProdId = null;
+const PRODUCT_IMAGE_BUCKET = 'product-images';
 
 async function renderProductTable() {
   const { data } = await sb.from('products').select('*').order('sort_order').order('created_at');
@@ -1828,15 +2104,62 @@ async function toggleProductActive(pid, val) {
   await sb.from('products').update({ active:val, updated_at:new Date().toISOString() }).eq('id',pid);
 }
 
-function openAddProduct() {
+function resetProductImageUploadState() {
+  const fileEl = document.getElementById('pImageFile');
+  const statusEl = document.getElementById('pImageUploadStatus');
+  const btnEl = document.getElementById('uploadImageBtn');
+  if (fileEl) fileEl.value = '';
+  if (statusEl) {
+    statusEl.textContent = '';
+    statusEl.style.color = 'var(--text3)';
+  }
+  if (btnEl) btnEl.disabled = false;
+}
+
+async function handleProductImageUpload(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('pImageUploadStatus');
+  const btnEl = document.getElementById('uploadImageBtn');
+  try {
+    if (!sb) throw new Error(currentLang==='zh' ? 'Supabase 未连接' : 'Supabase 未接続');
+    if (!file.type.startsWith('image/')) throw new Error(currentLang==='zh' ? '请选择图片文件' : '画像ファイルを選択してください');
+    statusEl.textContent = currentLang==='zh' ? '上传中...' : 'アップロード中...';
+    statusEl.style.color = 'var(--text2)';
+    btnEl.disabled = true;
+    const safeName = (file.name || 'image').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = `products/${Date.now()}_${safeName}`;
+    const { error: uploadError } = await sb.storage.from(PRODUCT_IMAGE_BUCKET).upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: true,
+      contentType: file.type || 'image/jpeg'
+    });
+    if (uploadError) throw uploadError;
+    const { data: publicData } = sb.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(filePath);
+    document.getElementById('pImage').value = publicData.publicUrl || '';
+    statusEl.textContent = currentLang==='zh' ? '上传成功' : 'アップロード完了';
+    statusEl.style.color = 'var(--green)';
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = (currentLang==='zh' ? '上传失败：' : 'アップロード失敗：') + (err.message || err);
+    statusEl.style.color = 'var(--red)';
+  } finally {
+    btnEl.disabled = false;
+    event.target.value = '';
+  }
+}
+
+function openAddProduct(preset = {}) {
   editProdId = null;
   document.getElementById('modalProductTitle').textContent = currentLang==='ja' ? '商品追加' : '添加商品';
   ['pName','pNameZh','pSpec','pEmoji','pImage'].forEach(id=>document.getElementById(id).value='');
-  populateCategorySelect();
-  document.getElementById('pPrice').value='0';
-  document.getElementById('pStock').value='0';
-  document.getElementById('pTax').value='8';
-  document.getElementById('pActive').checked=true;
+  resetProductImageUploadState();
+  populateCategorySelect(preset.category || '');
+  document.getElementById('pPrice').value = preset.price ?? '0';
+  document.getElementById('pStock').value = preset.stock ?? '0';
+  document.getElementById('pTax').value = String(preset.tax ?? '8');
+  document.getElementById('pActive').checked = true;
+  document.getElementById('saveAndContinueBtn').style.display = '';
   openModal('modalProduct');
 }
 
@@ -1844,6 +2167,8 @@ async function openEditProduct(pid) {
   editProdId = pid;
   const { data:p } = await sb.from('products').select('*').eq('id',pid).single();
   document.getElementById('modalProductTitle').textContent = currentLang==='ja' ? '商品編集' : '编辑商品';
+  document.getElementById('saveAndContinueBtn').style.display = 'none';
+  resetProductImageUploadState();
   document.getElementById('pName').value = p.name;
   document.getElementById('pNameZh').value = p.name_zh||'';
   populateCategorySelect(p.category);
@@ -1853,21 +2178,11 @@ async function openEditProduct(pid) {
   document.getElementById('pStock').value = p.stock;
   document.getElementById('pEmoji').value = p.emoji||'';
   document.getElementById('pImage').value = p.image_url||'';
-    const fi2=document.getElementById('pImageFile');if(fi2)fi2.value='';
-    const st2=document.getElementById('pUploadStatus');if(st2)st2.innerHTML='';
-    const prev2=document.getElementById('pImgPreview');
-    if(prev2){if(p.image_url){prev2.innerHTML=`<img src="${p.image_url}" style="width:100%;height:100%;object-fit:cover;border-radius:6px" onerror="this.parentNode.innerHTML='📷'">`;}else{prev2.innerHTML='📷';}}
   document.getElementById('pActive').checked = p.active;
   openModal('modalProduct');
 }
 
-async function saveProduct() {
-  // Upload image if file selected
-  const fileInput = document.getElementById('pImageFile');
-  if (fileInput && fileInput.files[0]) {
-    await uploadProductImage();
-    // URL now set in pImage field by uploadProductImage()
-  }
+async function saveProduct(keepAdding = false) {
   const stock = parseInt(document.getElementById('pStock').value)||0;
   const active = document.getElementById('pActive').checked && stock>0;
   const payload = {
@@ -1884,11 +2199,22 @@ async function saveProduct() {
   };
   if (!payload.name) { alert((currentLang==='zh'?'请输入商品名':'商品名を入力してください')); return; }
   showLoading((currentLang==='zh'?'保存中...':'保存中...'));
-  if (editProdId) await sb.from('products').update(payload).eq('id',editProdId);
-  else await sb.from('products').insert(payload);
+  const continuePreset = { category: payload.category, tax: payload.tax_rate, emoji: payload.emoji };
+  if (editProdId) {
+    await sb.from('products').update(payload).eq('id',editProdId);
+    keepAdding = false;
+  } else {
+    await sb.from('products').insert(payload);
+  }
   hideLoading();
-  closeModal('modalProduct');
   renderProductTable();
+  if (keepAdding && !editProdId) {
+    openAddProduct(continuePreset);
+    document.getElementById('pEmoji').value = continuePreset.emoji || '📦';
+    document.getElementById('pName').focus();
+    return;
+  }
+  closeModal('modalProduct');
 }
 
 async function deleteProduct(pid) {
@@ -2499,6 +2825,7 @@ function toggleLang() {
   currentLang = currentLang==='ja' ? 'zh' : 'ja';
   localStorage.setItem('fos_lang', currentLang);
   applyLang();
+  buildCategoryFilter();
 }
 function updateNavLabels() {
   const tabLabels = {
@@ -2839,97 +3166,79 @@ async function exportSummaryPDF() {
 
 // ── 购物车折叠/展开 - transform方案 ──
 let cartDrawerOpen = false;
-function toggleCartDrawer() {
-  const isMobile = window.innerWidth <= 800;
-  if (!isMobile) return;
-  cartDrawerOpen = !cartDrawerOpen;
+
+function applyCartDrawerState() {
   const panel = document.getElementById('cartPanel');
-  if (panel) {
-    if (cartDrawerOpen) panel.classList.add('cart-open');
-    else panel.classList.remove('cart-open');
-  }
   const arrow = document.getElementById('cartDrawerArrow');
-  if (arrow) arrow.textContent = cartDrawerOpen ? '▲' : '▼';
   const hint = document.getElementById('cartExpandHint');
+  if (!panel) return;
+
+  if (window.innerWidth > 800) {
+    panel.classList.remove('cart-open');
+    if (arrow) arrow.textContent = '▼';
+    if (hint) hint.style.opacity = '0';
+    return;
+  }
+
+  panel.classList.toggle('cart-open', cartDrawerOpen);
+  if (arrow) arrow.textContent = cartDrawerOpen ? '▲' : '▼';
   if (hint) hint.style.opacity = cartDrawerOpen ? '0' : '1';
+  syncMobileCategorySticky(true);
 }
+
+function toggleCartDrawer() {
+  if (window.innerWidth > 800) return;
+  cartDrawerOpen = !cartDrawerOpen;
+  applyCartDrawerState();
+}
+
 function openCartDrawer() {
   if (window.innerWidth > 800) return;
-  if (cartDrawerOpen) return;
   cartDrawerOpen = true;
-  const panel = document.getElementById('cartPanel');
-  if (panel) panel.classList.add('cart-open');
-  const arrow = document.getElementById('cartDrawerArrow');
-  if (arrow) arrow.textContent = '▲';
+  applyCartDrawerState();
 }
-window.addEventListener('resize', () => {
-  if (window.innerWidth > 800) {
-    const panel = document.getElementById('cartPanel');
-    if (panel) panel.classList.remove('cart-open');
-    cartDrawerOpen = false;
+
+function closeCartDrawer() {
+  cartDrawerOpen = false;
+  applyCartDrawerState();
+}
+
+
+let _cartScrollTick = false;
+window.addEventListener('scroll', () => {
+  if (window.innerWidth > 800 || !cartDrawerOpen) return;
+  if (_cartScrollTick) return;
+  _cartScrollTick = true;
+  requestAnimationFrame(() => {
+    closeCartDrawer();
+    _cartScrollTick = false;
+  });
+}, {passive:true});
+
+document.addEventListener('DOMContentLoaded', () => {
+  applyCartDrawerState();
+  const totalBar = document.getElementById('cartTotalBar');
+  let touchStartY = 0, touchMoveY = 0;
+  if (totalBar) {
+    totalBar.addEventListener('touchstart', (e) => {
+      touchStartY = e.touches[0].clientY;
+      touchMoveY = touchStartY;
+    }, {passive:true});
+    totalBar.addEventListener('touchmove', (e) => {
+      touchMoveY = e.touches[0].clientY;
+    }, {passive:true});
+    totalBar.addEventListener('touchend', () => {
+      if (Math.abs(touchMoveY - touchStartY) > 10) {
+        cartDrawerOpen = false;
+        applyCartDrawerState();
+      }
+    }, {passive:true});
   }
 });
-
-// ════════════════════════════════════
-// IMAGE UPLOAD
-// ════════════════════════════════════
-function previewImg(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const prev = document.getElementById('pImgPreview');
-    if (prev) prev.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`;
-  };
-  reader.readAsDataURL(file);
-  const urlField = document.getElementById('pImage');
-  if (urlField) urlField.value = '';
-  const status = document.getElementById('pUploadStatus');
-  if (status) status.innerHTML = `<span style="color:#d97706"><span class="ja">📁 ${file.name}</span><span class="zh">📁 ${file.name}</span></span>`;
-}
-
-async function uploadProductImage() {
-  const fileInput = document.getElementById('pImageFile');
-  const file = fileInput?.files[0];
-  if (!file) return null;
-
-  const status = document.getElementById('pUploadStatus');
-  if (status) status.innerHTML = '<span style="color:#d97706">⏳ <span class="ja">アップロード中...</span><span class="zh">上传中...</span></span>';
-
-  try {
-    if (file.size > 5 * 1024 * 1024) {
-      if (status) status.innerHTML = '<span style="color:#dc2626">❌ <span class="ja">5MB以内にしてください</span><span class="zh">文件不能超过5MB</span></span>';
-      return null;
-    }
-
-    const ext = file.name.split('.').pop().toLowerCase().replace('jpeg','jpg');
-    const safeName = `prod_${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
-
-    const { data, error } = await sb.storage
-      .from('products')
-      .upload(safeName, file, { cacheControl: '3600', upsert: false, contentType: file.type });
-
-    if (error) {
-      if (error.message.toLowerCase().includes('bucket')) {
-        if (status) status.innerHTML = '<span style="color:#dc2626">❌ <span class="ja">Supabase→Storage→「products」バケット(Public)を作成してください</span><span class="zh">请在Supabase→Storage→创建名为「products」的Bucket（Public）</span></span>';
-      } else {
-        if (status) status.innerHTML = `<span style="color:#dc2626">❌ ${error.message}</span>`;
-      }
-      return null;
-    }
-
-    const { data: urlData } = sb.storage.from('products').getPublicUrl(safeName);
-    const publicUrl = urlData.publicUrl;
-
-    if (status) status.innerHTML = '<span style="color:#059669">✅ <span class="ja">アップロード完了</span><span class="zh">上传成功</span></span>';
-    const urlField = document.getElementById('pImage');
-    if (urlField) urlField.value = publicUrl;
-    return publicUrl;
-  } catch(e) {
-    if (status) status.innerHTML = `<span style="color:#dc2626">❌ ${e.message}</span>`;
-    return null;
-  }
-}
+window.addEventListener('resize', () => { applyCartDrawerState(); syncMobileCategorySticky(true); });
+window.addEventListener('load', () => { applyCartDrawerState(); syncMobileCategorySticky(true); });
+window.addEventListener('scroll', syncMobileCategorySticky, {passive:true});
+document.addEventListener('DOMContentLoaded', () => { setTimeout(syncMobileCategorySticky, 150); });
 
 // Close modal overlay click
 document.querySelectorAll('.modal-overlay').forEach(el=>{
