@@ -1561,6 +1561,70 @@ let catFilter = '';
 let lastCatFilter = '';
 let tapProduct = null, tapQtyVal = 1;
 
+
+// ═══════════════════════════════════════════════
+// CART FUNCTIONS (getCart / setCart / renderCart)
+// ═══════════════════════════════════════════════
+function getCart() {
+  try { return JSON.parse(localStorage.getItem('fos_cart_'+(currentUser?.id||'_'))) || []; } catch { return []; }
+}
+function setCart(c) {
+  localStorage.setItem('fos_cart_'+(currentUser?.id||'_'), JSON.stringify(c));
+}
+
+function renderCart() {
+  const c = getCart();
+  const cntEl  = document.getElementById('cartCount');
+  const bodyEl = document.getElementById('cartBody');
+  const subEl  = document.getElementById('cartSubtotal');
+  const taxEl  = document.getElementById('cartTaxAmt');
+  const totEl  = document.getElementById('cartTotal');
+
+  if (!c.length) {
+    if (bodyEl) bodyEl.innerHTML = `<div class="cart-empty"><span class="ja">商品をタップして追加</span><br><span class="zh">点击商品加入购物车</span></div>`;
+    if (cntEl) cntEl.textContent = '';
+    [subEl, taxEl, totEl].forEach(el => { if (el) el.textContent = '¥0'; });
+    return;
+  }
+
+  let sub = 0, tax = 0;
+  if (bodyEl) {
+    bodyEl.innerHTML = c.map(item => {
+      const lp = item.unit_price * item.qty;
+      const lt = Math.round(lp * item.tax_rate / 100);
+      sub += lp; tax += lt;
+      return `<div class="cart-item">
+        <div class="cart-item-info">
+          <div class="cart-item-name">${item.product_emoji||'📦'} ${item.product_name}</div>
+          <div class="cart-item-sub">${item.product_spec}</div>
+        </div>
+        <div class="qty-wrap">
+          <button class="qty-btn m" onclick="cartQty('${item.product_id}',-1)">−</button>
+          <span class="qty-num">${item.qty}</span>
+          <button class="qty-btn p" onclick="cartQty('${item.product_id}',1)">＋</button>
+        </div>
+        <div class="cart-line-price">${fmt(lp)}</div>
+      </div>`;
+    }).join('');
+  }
+  const total = sub + tax;
+  if (subEl) subEl.textContent = fmt(sub);
+  if (taxEl) taxEl.textContent = fmt(tax);
+  if (totEl) totEl.textContent = fmt(total);
+  if (cntEl) cntEl.textContent = c.reduce((a,i) => a+i.qty, 0) + '点';
+}
+
+function cartQty(pid, d) {
+  let c = getCart();
+  const idx = c.findIndex(x => x.product_id === pid);
+  if (idx < 0) return;
+  c[idx].qty = Math.max(0, c[idx].qty + d);
+  if (c[idx].qty === 0) c.splice(idx, 1);
+  setCart(c);
+  renderCart();
+  renderProducts();
+}
+
 async function loadProducts() {
   showLoading((currentLang==='zh'?'加载商品...':'商品読み込み中...'));
   const { data } = await sb.from('products').select('*').order('sort_order').order('created_at');
@@ -1720,6 +1784,7 @@ function tapAddCart() {
   closeModal('modalTap');
   renderProducts();
   renderCart();
+  openCartDrawer();
 }
 
 let categoryStickyTicking = false;
@@ -3339,7 +3404,7 @@ document.addEventListener('DOMContentLoaded', () => { setTimeout(syncMobileCateg
 document.querySelectorAll('.modal-overlay').forEach(el=>{
   el.addEventListener('click', e=>{ if(e.target===el) el.classList.remove('active'); });
 });
+window.addEventListener('resize', ()=>{ updateNavLabels(); if (document.getElementById('page-order-history')?.classList.contains('active')) renderOrderHistory(); });
 </script>
 </body>
 </html>
-window.addEventListener('resize', ()=>{ updateNavLabels(); if (document.getElementById('page-order-history')?.classList.contains('active')) renderOrderHistory(); });
