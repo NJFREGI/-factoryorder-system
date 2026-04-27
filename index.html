@@ -514,6 +514,7 @@ tr:hover td{background:var(--bg);}
           <div class="form-row">
             <div class="form-group"><label class="form-label"><span class="ja">パスワード</span><span class="sep"> / </span><span class="zh">密码</span></label><input class="form-input" id="newShopPass" placeholder="pass123"></div>
           </div>
+          <div class="form-group"><label class="form-label"><span class="ja">住所</span><span class="sep"> / </span><span class="zh">地址</span></label><input class="form-input" id="newShopAddr" placeholder="例: 東京都台東区入谷1-8-5"></div>
           <button class="btn btn-outline" onclick="addShop()"><span class="ja">＋ 店舗追加</span><span class="sep"> / </span><span class="zh">添加店铺</span></button>
         </div>
         <div class="card">
@@ -791,18 +792,13 @@ async function deleteProduct(pid){if(!confirm(currentLang==='zh'?'确定删除�
 
 // SETTINGS
 async function loadSettingsPage(){await loadCutoffSetting();document.getElementById('cutoffSetting').value=cutoffTime;loadShopList();populateInvoiceShop();const now=new Date();document.getElementById('invoiceMonth').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;}
-async function loadShopList(){const{data}=await sb.from('users').select('id,name,password_hash').eq('role','order').eq('active',true);document.getElementById('shopListEl').innerHTML=(data||[]).map(u=>`<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:var(--bg);"><div style="display:flex;align-items:center;gap:8px;" id="shopRow_${u.id}"><span style="font-size:11px;color:var(--text3);background:var(--bg2);padding:2px 8px;border-radius:4px;font-weight:600;">${u.id}</span><span style="flex:1;font-size:14px;font-weight:600;">🏪 ${u.name}</span><button class="btn btn-outline btn-sm" onclick="toggleShopEdit('${u.id}')">✏️ 編集</button><button class="btn btn-sm" style="background:var(--red-light);color:var(--red);" onclick="deleteShop('${u.id}','${u.name}')">🗑 削除</button></div><div id="shopEdit_${u.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;"><div><div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;">店舗名</div><input class="form-input" id="editShopName_${u.id}" value="${u.name}" style="padding:7px 10px;font-size:13px;"></div><div><div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;">パスワード</div><input class="form-input" id="editShopPass_${u.id}" value="${u.password_hash}" style="padding:7px 10px;font-size:13px;"></div></div><div style="display:flex;gap:8px;"><button class="btn btn-red btn-sm" onclick="saveShopEdit('${u.id}')">保存</button><button class="btn btn-outline btn-sm" onclick="toggleShopEdit('${u.id}')">キャンセル</button></div></div></div>`).join('')||'<div style="font-size:13px;color:var(--text3);padding:8px;">店舗なし</div>';}
+async function loadShopList(){const{data}=await sb.from('users').select('id,name,password_hash,address').eq('role','order').eq('active',true);document.getElementById('shopListEl').innerHTML=(data||[]).map(u=>`<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:var(--bg);"><div style="display:flex;align-items:center;gap:8px;" id="shopRow_${u.id}"><span style="font-size:11px;color:var(--text3);background:var(--bg2);padding:2px 8px;border-radius:4px;font-weight:600;">${u.id}</span><span style="flex:1;font-size:14px;font-weight:600;">🏪 ${u.name}</span><button class="btn btn-outline btn-sm" onclick="toggleShopEdit('${u.id}')">✏️ 編集</button><button class="btn btn-sm" style="background:var(--red-light);color:var(--red);" onclick="deleteShop('${u.id}','${u.name}')">🗑 削除</button></div><div id="shopEdit_${u.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;"><div><div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;">店舗名 / 店名</div><input class="form-input" id="editShopName_${u.id}" value="${u.name}" style="padding:7px 10px;font-size:13px;"></div><div><div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;">パスワード / 密码</div><input class="form-input" id="editShopPass_${u.id}" value="${u.password_hash}" style="padding:7px 10px;font-size:13px;"></div></div><div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;">住所 / 地址</div><input class="form-input" id="editShopAddr_${u.id}" value="${u.address||''}" placeholder="例: 東京都台東区入谷1-8-5" style="padding:7px 10px;font-size:13px;"></div><div style="display:flex;gap:8px;"><button class="btn btn-red btn-sm" onclick="saveShopEdit('${u.id}')">保存</button><button class="btn btn-outline btn-sm" onclick="toggleShopEdit('${u.id}')">キャンセル</button></div></div></div>`).join('')||'<div style="font-size:13px;color:var(--text3);padding:8px;">店舗なし / 暂无店铺</div>';}
 function toggleShopEdit(id){const el=document.getElementById('shopEdit_'+id);if(el)el.style.display=el.style.display==='none'?'block':'none';}
-async function saveShopEdit(id){const name=document.getElementById('editShopName_'+id).value.trim();const pass=document.getElementById('editShopPass_'+id).value.trim();if(!name||!pass){alert(currentLang==='zh'?'请填写完整':'入力してください');return;}await sb.from('users').update({name,password_hash:pass}).eq('id',id);alert(currentLang==='zh'?'保存成功！':'保存しました！');loadShopList();populateInvoiceShop();}
+async function saveShopEdit(id){const name=document.getElementById('editShopName_'+id).value.trim();const pass=document.getElementById('editShopPass_'+id).value.trim();const addr=(document.getElementById('editShopAddr_'+id)||{}).value||'';if(!name||!pass){alert(currentLang==='zh'?'请填写完整':'入力してください');return;}await sb.from('users').update({name,password_hash:pass,address:addr}).eq('id',id);alert(currentLang==='zh'?'保存成功！':'保存しました！');loadShopList();populateInvoiceShop();}
 async function deleteShop(id,name){const msg=currentLang==='zh'?`确定删除「${name}」？`:`「${name}」を削除しますか？`;if(!confirm(msg))return;await sb.from('users').update({active:false}).eq('id',id);loadShopList();populateInvoiceShop();}
 async function populateInvoiceShop(){const{data}=await sb.from('users').select('id,name').eq('role','order').eq('active',true);const el=document.getElementById('invoiceShopSel');if(el)el.innerHTML='<option value="">全店舗 / 全部</option>'+(data||[]).map(u=>`<option value="${u.id}">${u.name}</option>`).join('');}
-async function addShop(){const id=document.getElementById('newShopId').value.trim();const name=document.getElementById('newShopName').value.trim();const pass=document.getElementById('newShopPass').value.trim();if(!id||!name||!pass){alert(currentLang==='zh'?'请填写所有字段':'すべての項目を入力してください');return;}await sb.from('users').upsert({id,name,role:'order',password_hash:pass,active:true});document.getElementById('newShopId').value='';document.getElementById('newShopName').value='';document.getElementById('newShopPass').value='';loadShopList();populateInvoiceShop();alert(`店舗「${name}」を追加しました\nID: ${id} / パスワード: ${pass}`);}
-
-// PDF GENERATION
-function pdfItemName(item){const nameMap={'国産牛ロース':'Wagyu Loin','豚バラスライス':'Pork Belly','鶏もも肉':'Chicken Thigh','サーモン切り身':'Salmon Fillet','キャベツ':'Cabbage','玉ねぎ':'Onion','食塩（業務用）':'Salt (Ind.)','醤油（業務用）':'Soy Sauce (Ind.)','干豆腐':'Tofu Sheet'};if(nameMap[item.product_name])return nameMap[item.product_name];const name=item.product_name||'';const ascii=name.replace(/[^\x20-\x7E]/g,'').trim();if(ascii.length>=2)return ascii.slice(0,28);return `Item`;}
-function pdfShopName(name){if(!name)return 'Shop';let n=name;if(n.includes(' / ')){const parts=n.split(' / ');const a0=parts[0].replace(/[^\x20-\x7E]/g,'').trim();const a1=(parts[1]||'').replace(/[^\x20-\x7E]/g,'').trim();n=a0.length>=a1.length?parts[0]:parts[1];}const ascii=n.replace(/[^\x20-\x7E]/g,'').trim();return ascii.length>=1?ascii.slice(0,20):name.slice(0,8);}
-function pdfShopNameWithId(shopName,shopId){const n=pdfShopName(shopName);if(n&&n.length>=3&&!/[^\x20-\x7E]/.test(n)){return shopId?`${n} (${shopId})`:n;}return shopId||'Shop';}
-
+async function addShop(){const id=document.getElementById('newShopId').value.trim();const name=document.getElementById('newShopName').value.trim();const pass=document.getElementById('newShopPass').value.trim();const addrEl=document.getElementById('newShopAddr');const addr=addrEl?addrEl.value.trim():'';if(!id||!name||!pass){alert(currentLang==='zh'?'请填写所有字段':'すべての項目を入力してください');return;}await sb.from('users').upsert({id,name,role:'order',password_hash:pass,address:addr,active:true});document.getElementById('newShopId').value='';document.getElementById('newShopName').value='';document.getElementById('newShopPass').value='';if(addrEl)addrEl.value='';loadShopList();populateInvoiceShop();alert(`店舗「${name}」を追加しました
+ID: ${id} / パスワード: ${pass}`);}
 async function genDeliveryPDF(orderId){const{data:order}=await sb.from('orders').select('*, order_items(*)').eq('id',orderId).single();if(!order)return;const shopName=displayName(order.shop_name)||order.shop_id;const si=statusInfo(order.status);const items=order.order_items||[];const note=(order.note||'').replace(/<[^>]*>/g,'').trim();const factNote=(order.factory_note||'').replace(/<[^>]*>/g,'').trim();const rows=items.map(item=>{const shortage=item.shortage?`<td style="color:#dc2626;font-weight:700;">欠品${item.shortage_note?' ('+item.shortage_note+')':''}</td>`:`<td style="color:#aaa;">—</td>`;return`<tr><td>${item.product_emoji||'📦'} ${item.product_name}</td><td>${item.product_spec}</td><td style="text-align:center;font-weight:700;font-size:15px;">${item.qty}</td><td style="text-align:right;">¥${Math.round(item.unit_price).toLocaleString()}</td><td style="text-align:center;">${item.tax_rate}%</td><td style="text-align:right;font-weight:700;">¥${Math.round(item.unit_price*item.qty).toLocaleString()}</td>${shortage}</tr>`;}).join('');const html=`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>送り状 #${order.order_no}</title><style>@media print{body{margin:0}button{display:none!important}}body{font-family:'Noto Sans JP','Hiragino Sans',sans-serif;font-size:13px;color:#1a1a1a;padding:28px;max-width:820px;margin:0 auto;}.print-btn{position:fixed;top:16px;right:16px;padding:10px 22px;background:#2563EB;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;}h1{font-size:24px;font-weight:900;text-align:center;letter-spacing:.08em;margin:0 0 6px;}.blue-line{height:3px;background:#2563EB;border-radius:2px;margin-bottom:22px;}.meta{display:grid;grid-template-columns:1fr 1fr;gap:4px 32px;margin-bottom:20px;}.meta-row{font-size:13px;display:flex;gap:8px;}.meta-row .k{color:#666;min-width:60px;}.meta-row .v{font-weight:600;}table{width:100%;border-collapse:collapse;margin-bottom:18px;}th{background:#f1f3f5;padding:9px 12px;text-align:left;font-size:12px;font-weight:700;color:#444;border-bottom:2px solid #dee2e6;}td{padding:10px 12px;border-bottom:1px solid #f1f3f5;font-size:13px;}.totals{margin-left:auto;width:280px;}.totals table{margin:0;}.totals td{padding:5px 10px;}.totals .grand{font-size:17px;font-weight:900;color:#2563EB;border-top:2px solid #dee2e6;padding-top:8px;}.sign-area{margin-top:28px;display:grid;grid-template-columns:1fr 1fr;gap:24px;}.sign-box{border-top:2px solid #333;padding-top:7px;font-size:12px;color:#666;}.footer{text-align:center;font-size:11px;color:#bbb;margin-top:36px;}</style></head><body><button class="print-btn" onclick="window.print()">🖨️ 印刷 / PDF保存</button><h1>送 り 状</h1><div class="blue-line"></div><div class="meta"><div class="meta-row"><span class="k">注文番号</span><span class="v">#${order.order_no}</span></div><div class="meta-row"><span class="k">発行日時</span><span class="v">${new Date().toLocaleString('ja-JP')}</span></div><div class="meta-row"><span class="k">店舗</span><span class="v">${shopName}</span></div><div class="meta-row"><span class="k">注文日</span><span class="v">${order.order_date}</span></div><div class="meta-row"><span class="k">ステータス</span><span class="v">${si.ja}</span></div></div>${note?`<div style="padding:8px 12px;border-radius:4px;margin-bottom:16px;font-size:13px;background:#eff6ff;border-left:4px solid #2563EB;">📝 備考：${note}</div>`:''} ${factNote?`<div style="padding:8px 12px;border-radius:4px;margin-bottom:16px;font-size:13px;background:#fffbeb;border-left:4px solid #f59e0b;">🏭 工場メモ：${factNote}</div>`:''}<table><thead><tr><th>商品名</th><th>規格</th><th style="text-align:center;">数量</th><th style="text-align:right;">単価</th><th style="text-align:center;">税率</th><th style="text-align:right;">金額</th><th>欠品</th></tr></thead><tbody>${rows}</tbody></table><div class="totals"><table><tr><td style="color:#666;">小計（税抜）</td><td style="text-align:right;">¥${Math.round(order.subtotal||0).toLocaleString()}</td></tr><tr><td style="color:#666;">消費税</td><td style="text-align:right;">¥${Math.round(order.tax_total||0).toLocaleString()}</td></tr><tr><td class="grand">合計（税込）</td><td class="grand" style="text-align:right;">¥${Math.round(order.total||0).toLocaleString()}</td></tr></table></div><div class="sign-area"><div class="sign-box">受取確認サイン</div><div class="sign-box">受取日：　　　年　　月　　日</div></div><div class="footer">受発注システム — 送り状 #${order.order_no} — ${new Date().toLocaleString('ja-JP')}</div></body></html>`;const w=window.open('','_blank','width=920,height=720,scrollbars=yes');if(!w){alert('ポップアップをブロックされています。');return;}w.document.write(html);w.document.close();}
 
 async function generateInvoicePDF(){const month=document.getElementById('invoiceMonth').value;const shopId=document.getElementById('invoiceShopSel').value;if(!month){alert(currentLang==='zh'?'请选择月份':'月を選択してください');return;}showLoading(currentLang==='zh'?'生成PDF...':'PDF生成中...');let query=sb.from('orders').select('*, order_items(*)').gte('order_date',month+'-01').lte('order_date',month+'-31').eq('receipt_confirmed',true);if(shopId)query=query.eq('shop_id',shopId);const{data:orders}=await query.order('order_date');hideLoading();if(!orders||!orders.length){alert(currentLang==='zh'?'没有已确认的订单':'確認済み注文がありません');return;}const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});const shops=[...new Set(orders.map(o=>o.shop_id))];let first=true;shops.forEach(sid=>{const shopOrders=orders.filter(o=>o.shop_id===sid);if(!shopOrders.length)return;if(!first)doc.addPage();first=false;const shopName=shopOrders[0].shop_name;const totalAmt=shopOrders.reduce((a,o)=>a+(o.total||0),0);const taxAmt=shopOrders.reduce((a,o)=>a+(o.tax_total||0),0);const shopDisplayInv=pdfShopNameWithId(shopName,shopOrders[0]?.shop_id);doc.setFontSize(20);doc.setFont('helvetica','bold');doc.text('INVOICE',105,18,{align:'center'});doc.setDrawColor(37,99,235);doc.setLineWidth(0.8);doc.line(20,22,190,22);doc.setFontSize(10);doc.setFont('helvetica','normal');doc.text(`To: ${shopDisplayInv}`,20,30);doc.text(`Period: ${month}`,20,37);doc.text(`Orders: ${shopOrders.length}`,20,44);doc.text(`Issued: ${new Date().toLocaleDateString('ja-JP')}`,130,30);doc.line(20,50,190,50);let y=58;doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('Date',20,y);doc.text('Order#',50,y);doc.text('Items',85,y);doc.text('Subtotal',115,y,{align:'right'});doc.text('Tax',140,y,{align:'right'});doc.text('Total',175,y,{align:'right'});doc.line(20,y+2,190,y+2);y+=9;doc.setFont('helvetica','normal');shopOrders.forEach(o=>{doc.text(o.order_date,20,y);doc.text('#'+o.order_no,50,y);doc.text(String(o.order_items?.length||''),85,y);doc.text('Y'+(o.subtotal||0).toLocaleString(),115,y,{align:'right'});doc.text('Y'+(o.tax_total||0).toLocaleString(),140,y,{align:'right'});doc.text('Y'+(o.total||0).toLocaleString(),175,y,{align:'right'});y+=8;});doc.line(20,y,190,y);y+=8;doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('GRAND TOTAL (incl. tax):',80,y);doc.text('Y'+Math.round(totalAmt).toLocaleString(),175,y,{align:'right'});});doc.save(`invoice_${month}${shopId?'_'+shopId:''}.pdf`);}
@@ -921,15 +917,20 @@ async function uploadProductImage(){const fileInput=document.getElementById('pIm
 document.querySelectorAll('.modal-overlay').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('active');});});
 
 // ═══════════════════════════════════════════════
-// ★ 云打印模块 ★
+// 納品書 云打印模块
 // ═══════════════════════════════════════════════
+
 const PRINT_CONFIG = {
   workerUrl: localStorage.getItem('hprt_worker_url') || '',
   userKey:   'f4dedc24818d11f0840a043f72a0b6f2',
   userSecret:'f4deeb55818d11f0840a043f72a0b6f2',
   equipSn:   'TP80NY1525310584',
+  // 発行元固定情報
+  senderName: '金澤国際株式会社取手工場',
+  senderTel:  '03-1234-5678',
 };
 
+// ESCコンテンツビルダー
 function buildPrintContent(lines) {
   let content = '<Sp W=0x00 H=0x00>';
   for (const line of lines) {
@@ -937,14 +938,17 @@ function buildPrintContent(lines) {
     const align = line.align || 'left';
     const bold  = line.bold  || false;
     const large = line.large || false;
+    const xl    = line.xl    || false;
     let str = '';
     if (align==='center') str += '<center>';
     else if (align==='right') str += '<right>';
     else str += '<left>';
     if (bold)  str += '<bold>';
-    if (large) str += '<FontSize W=2 H=2>';
+    if (xl)    str += '<FontSize W=2 H=2>';
+    else if (large) str += '<FontSize W=1 H=2>';
     str += text;
-    if (large) str += '<FontSize W=1 H=1>';
+    if (xl)    str += '<FontSize W=1 H=1>';
+    else if (large) str += '<FontSize W=1 H=1>';
     if (bold)  str += '</bold>';
     str += '<BR>';
     content += str;
@@ -953,6 +957,156 @@ function buildPrintContent(lines) {
   return content;
 }
 
+// 固定幅テキスト整形（80mm = 全角24文字 = 半角48文字）
+const W = 48; // 半角換算幅
+function padR(s, w) { s = String(s); return s + ' '.repeat(Math.max(0, w - s.length)); }
+function padL(s, w) { s = String(s); return ' '.repeat(Math.max(0, w - s.length)) + s; }
+
+// 区切り線
+function divLine(char='-') { return char.repeat(W); }
+
+// 納品書1ページ分のlines生成
+function buildNobinshoPage(order, shopInfo, items, pageNum, totalPages) {
+  const lj = currentLang === 'zh';
+  const date = new Date().toLocaleDateString('ja-JP', {year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'/');
+  const orderDate = order.order_date || '';
+  const shopName = displayName(order.shop_name) || order.shop_id;
+  const shopAddr = shopInfo?.address || '';
+  const note = order.note || '';
+
+  const lines = [];
+
+  // ページ番号（右上）
+  if (totalPages > 1) {
+    lines.push({ text: padL(`${pageNum}/${totalPages}`, W), align:'left' });
+  }
+
+  // タイトル
+  lines.push({ text: '　納　品　書', align:'center', bold:true, xl:true });
+  lines.push({ text: divLine('━'), align:'left' });
+
+  // 発行情報
+  lines.push({ text: `発行日　　: ${date}` });
+  lines.push({ text: `伝票番号　: NO.${orderDate.replace(/-/g,'')}-${String(order.order_no).padStart(3,'0')}` });
+  lines.push({ text: `納品日　　: ${orderDate}` });
+  lines.push({ text: divLine(), align:'left' });
+
+  // 納品先
+  lines.push({ text: `お得意先名: ${shopName}`, bold:true });
+  if (shopAddr) {
+    lines.push({ text: `住　所　　: ${shopAddr}` });
+  }
+  lines.push({ text: divLine(), align:'left' });
+
+  // 発行元
+  lines.push({ text: `発行元　　: ${PRINT_CONFIG.senderName}` });
+  lines.push({ text: `TEL　　　 : ${PRINT_CONFIG.senderTel}` });
+  lines.push({ text: divLine('━'), align:'left' });
+
+  // 商品テーブルヘッダー
+  // 商品名(20) 数量(4) 単価(8) 金額(8) = 40
+  const hName = padR('商品名', 20);
+  const hQty  = padL('数量', 4);
+  const hPri  = padL('単価', 7);
+  const hAmt  = padL('金額', 8);
+  lines.push({ text: `${hName}${hQty}${hPri}${hAmt}`, bold:true });
+  lines.push({ text: divLine(), align:'left' });
+
+  // 商品行
+  let pageSub = 0;
+  items.forEach(item => {
+    const qty = item.qty || 0;
+    const price = item.unit_price || 0;
+    const amt = price * qty;
+    pageSub += amt;
+
+    const name = (item.product_name || '').slice(0, 18);
+    const spec = (item.product_spec || '').slice(0, 18);
+    const qtyStr  = padL(String(qty), 4);
+    const priStr  = padL(`¥${Math.round(price).toLocaleString()}`, 7);
+    const amtStr  = padL(`¥${Math.round(amt).toLocaleString()}`, 8);
+
+    lines.push({ text: `${padR(name, 20)}${qtyStr}${priStr}${amtStr}` });
+    if (spec) {
+      lines.push({ text: `  ${spec}` });
+    }
+  });
+
+  lines.push({ text: divLine(), align:'left' });
+
+  // 最終ページのみ合計表示
+  const isLastPage = pageNum === totalPages;
+  if (isLastPage) {
+    // 全商品の合計計算
+    const allItems = order.order_items || [];
+    let totalSub = 0, totalTax = 0;
+    allItems.forEach(i => {
+      const lp = (i.unit_price||0)*(i.qty||0);
+      totalSub += lp;
+      totalTax += Math.round(lp*(i.tax_rate||0)/100);
+    });
+
+    lines.push({ text: padL(`小計　　　　　 ¥${Math.round(totalSub).toLocaleString()}`, W) });
+    lines.push({ text: divLine('-'), align:'left' });
+    lines.push({ text: padL(`消費税　　　　 ¥${Math.round(totalTax).toLocaleString()}`, W) });
+    lines.push({ text: divLine('━'), align:'left' });
+    lines.push({ text: padL(`合計　 ¥${Math.round(totalSub+totalTax).toLocaleString()}`, W), bold:true, xl:true });
+    lines.push({ text: divLine('━'), align:'left' });
+
+    // 備考
+    if (note) {
+      lines.push({ text: '【備考】', bold:true });
+      lines.push({ text: note });
+      lines.push({ text: divLine(), align:'left' });
+    }
+  } else {
+    lines.push({ text: `　　　　　　　　　　　　　→次ページへ続く` });
+  }
+
+  lines.push({ text: '' });
+  lines.push({ text: '' });
+
+  return lines;
+}
+
+// 納品書打印（複数ページ対応）
+async function printNobinsho(orderId) {
+  showLoading(currentLang==='zh'?'准备打印...':'印刷準備中...');
+
+  // 注文データ取得
+  const { data:order } = await sb.from('orders')
+    .select('*, order_items(*)')
+    .eq('id', orderId).single();
+
+  // 店舗住所取得
+  const { data:shopData } = await sb.from('users')
+    .select('id,name,address')
+    .eq('id', order?.shop_id).single();
+
+  hideLoading();
+  if (!order) { alert('データが見つかりません'); return; }
+
+  const allItems = order.order_items || [];
+  const ITEMS_PER_PAGE = 10;
+  const totalPages = Math.max(1, Math.ceil(allItems.length / ITEMS_PER_PAGE));
+
+  // ページ毎に印刷
+  for (let p = 0; p < totalPages; p++) {
+    const pageItems = allItems.slice(p * ITEMS_PER_PAGE, (p+1) * ITEMS_PER_PAGE);
+    const pageLines = buildNobinshoPage(order, shopData, pageItems, p+1, totalPages);
+    const content = buildPrintContent(pageLines);
+
+    const ok = await cloudPrint(content, `order_${order.order_no}_p${p+1}`);
+    if (!ok) break;
+
+    // ページ間に少し待機
+    if (p < totalPages - 1) {
+      await new Promise(r => setTimeout(r, 1500));
+    }
+  }
+}
+
+// 云打印送信
 async function cloudPrint(content, orderNo='') {
   const url = PRINT_CONFIG.workerUrl;
   if (!url) {
@@ -976,13 +1130,8 @@ async function cloudPrint(content, orderNo='') {
     });
     hideLoading();
     const result = await resp.json();
-    if (result.status) {
-      alert(currentLang==='zh'?'✅ 打印成功！':'✅ 印刷しました！');
-      return true;
-    } else {
-      alert(`❌ ${result.msg||(currentLang==='zh'?'打印失败':'印刷失敗')}`);
-      return false;
-    }
+    if (result.status) return true;
+    else { alert(`❌ ${result.msg||(currentLang==='zh'?'打印失败':'印刷失敗')}`); return false; }
   } catch(e) {
     hideLoading();
     alert(`❌ ${e.message}`);
@@ -990,70 +1139,7 @@ async function cloudPrint(content, orderNo='') {
   }
 }
 
-function buildDeliveryTicket(order) {
-  const items    = order.order_items || [];
-  const lj       = currentLang === 'zh';
-  const shopName = displayName(order.shop_name) || order.shop_id;
-  const div      = '────────────────';
-  let sub=0, tax=0;
-  items.forEach(i => {
-    const lp=(i.unit_price||0)*(i.qty||0);
-    sub+=lp; tax+=Math.round(lp*(i.tax_rate||0)/100);
-  });
-  const lines = [
-    { text:lj?'送 货 单':'送  り  状', align:'center', bold:true, large:true },
-    { text:div, align:'center' },
-    { text:`${lj?'订单号':'注文番号'}: #${order.order_no}` },
-    { text:`${lj?'店铺'  :'店舗名'  }: ${shopName}` },
-    { text:`${lj?'日期'  :'日付'    }: ${order.order_date}` },
-    { text:`${lj?'状态'  :'状態'    }: ${statusInfo(order.status).l}` },
-  ];
-  if (order.note) {
-    lines.push({ text:div, align:'center' });
-    lines.push({ text:`${lj?'备注':'備考'}: ${order.note}` });
-  }
-  lines.push({ text:div, align:'center' });
-  lines.push({ text:lj?'商品              数量    金额':'商品              数量    金額', bold:true });
-  lines.push({ text:div, align:'center' });
-  items.forEach(item => {
-    const qty=item.qty||0;
-    const lp=(item.unit_price||0)*qty;
-    lines.push({ text:`${item.product_emoji||''} ${item.product_name}` });
-    lines.push({ text:`  ${item.product_spec}` });
-    const right=`x${qty}   ¥${Math.round(lp).toLocaleString()}`;
-    const pad=Math.max(1,26-right.length);
-    lines.push({ text:`  ${' '.repeat(pad)}${right}` });
-    if (item.shortage) {
-      lines.push({ text:`  ⚠ ${lj?'缺货':'欠品'}${item.shortage_note?'：'+item.shortage_note:''}`, bold:true });
-    }
-  });
-  lines.push({ text:div, align:'center' });
-  lines.push({ text:`${lj?'小计':'小計'}: ¥${Math.round(sub).toLocaleString()}`, align:'right' });
-  lines.push({ text:`${lj?'税额':'消費税'}: ¥${Math.round(tax).toLocaleString()}`, align:'right' });
-  lines.push({ text:div, align:'center' });
-  lines.push({ text:lj?'合计（含税）':'合計（税込）', align:'right', bold:true });
-  lines.push({ text:`¥${Math.round(sub+tax).toLocaleString()}`, align:'right', bold:true, large:true });
-  lines.push({ text:div, align:'center' });
-  lines.push({ text:lj?'收货签名：':'受取サイン：' });
-  lines.push({ text:'' });
-  lines.push({ text:'' });
-  lines.push({ text:lj?'日期：':'日付：' });
-  lines.push({ text:'' });
-  lines.push({ text:'' });
-  return buildPrintContent(lines);
-}
-
-async function printDeliveryOrder(orderId) {
-  showLoading(currentLang==='zh'?'准备打印...':'印刷準備中...');
-  const { data:order } = await sb.from('orders')
-    .select('*, order_items(*)')
-    .eq('id', orderId).single();
-  hideLoading();
-  if (!order) { alert('データが見つかりません'); return; }
-  const content = buildDeliveryTicket(order);
-  await cloudPrint(content, `order_${order.order_no}`);
-}
-
+// 打印設定
 function openPrintSettings() {
   const current = PRINT_CONFIG.workerUrl;
   const url = prompt(
@@ -1068,6 +1154,12 @@ function openPrintSettings() {
     alert(currentLang==='zh'?'✅ 已保存！':'✅ 保存しました！');
   }
 }
+
+// 旧printDeliveryOrderは削除（printNobinshoに統合）
+async function printDeliveryOrder(orderId) {
+  await printNobinsho(orderId);
+}
+
 </script>
 </body>
 </html>
