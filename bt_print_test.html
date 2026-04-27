@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>汉印TP80NY 蓝牙打印测试</title>
+<title>汉印TP80NY 云打印测试</title>
 <style>
 :root{--P:#2563EB;--PD:#1d4ed8;--G:#059669;--R:#dc2626;--O:#d97706;--bg:#f8f9fa;--w:#fff;--t:#1a1a1a;--t2:#555;--t3:#999;--b:#dee2e6;--r:12px}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -27,49 +27,43 @@ h1{font-size:18px;font-weight:800;color:var(--P);margin-bottom:2px}
 .status.warn{background:#fffbeb;color:#92400e;border:1px solid #fcd34d}
 .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .dot-g{background:var(--G)}.dot-r{background:var(--R)}.dot-o{background:var(--O)}.dot-b{background:var(--P)}
-.log{background:#0f172a;color:#94a3b8;border-radius:8px;padding:12px;font-family:monospace;font-size:11px;min-height:100px;max-height:200px;overflow-y:auto;line-height:1.7}
+.log{background:#0f172a;color:#94a3b8;border-radius:8px;padding:12px;font-family:monospace;font-size:11px;min-height:100px;max-height:240px;overflow-y:auto;line-height:1.7}
 .log .ok{color:#4ade80}.log .err{color:#f87171}.log .info{color:#60a5fa}.log .warn{color:#fbbf24}
 .note{font-size:12px;color:var(--t3);line-height:1.6;padding:8px 10px;background:var(--bg);border-radius:6px;margin-top:4px}
 .row{display:flex;gap:8px}
 .row .btn{margin-bottom:0;flex:1}
+.form-input{width:100%;padding:10px 12px;border:1.5px solid var(--b);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:8px;background:var(--w)}
+.form-input:focus{outline:none;border-color:var(--P)}
+.form-label{font-size:12px;font-weight:600;color:var(--t2);margin-bottom:4px;display:block}
 </style>
 </head>
 <body>
 
-<h1>🖨️ 汉印 TP80NY 蓝牙打印</h1>
-<p class="sub">Web Bluetooth · ESC/POS · 80mm · Android Chrome</p>
+<h1>🖨️ 汉印 TP80NY 云打印</h1>
+<p class="sub">汉印云 OpenAPI · ESC格式 · 无需蓝牙</p>
 
-<!-- 兼容性 -->
+<!-- 配置 -->
 <div class="card">
-  <div class="card-title">① 浏览器检测</div>
-  <div id="compatSt" class="status info"><div class="dot dot-b"></div><span>检测中...</span></div>
-  <div class="note">必须使用 Android 手机的 Chrome 浏览器。iOS 不支持。</div>
-</div>
-
-<!-- 连接 -->
-<div class="card">
-  <div class="card-title">② 连接打印机</div>
-  <div id="connSt" class="status warn"><div class="dot dot-o"></div><span>未连接</span></div>
-  <button class="btn btn-p" id="btnConn" onclick="connectPrinter()">📡 搜索并连接 TP80NY</button>
-  <button class="btn btn-r" id="btnDisc" onclick="disconnect()" style="display:none">断开连接</button>
-  <div class="note">点击后会弹出蓝牙列表，选择「TP80NY」或「HPRT」开头的设备。<br>⚠️ 先在手机蓝牙设置里配对好打印机。</div>
+  <div class="card-title">① 打印机配置</div>
+  <label class="form-label">Worker代理地址（部署后填入）</label>
+  <input class="form-input" id="workerUrl" placeholder="https://your-worker.workers.dev" value="">
+  <label class="form-label">user_key</label>
+  <input class="form-input" id="userKey" value="f4dedc24818d11f0840a043f72a0b6f2">
+  <label class="form-label">user_secret</label>
+  <input class="form-input" id="userSecret" value="f4deeb55818d11f0840a043f72a0b6f2">
+  <label class="form-label">设备SN号</label>
+  <input class="form-input" id="equipSn" value="TP80NY1525310584">
+  <button class="btn btn-p" onclick="testConnection()">🔗 测试连接</button>
+  <div class="note">⚠️ 需要先部署Cloudflare Worker，填入Worker地址后才能使用。</div>
 </div>
 
 <!-- 测试打印 -->
 <div class="card">
-  <div class="card-title">③ 打印测试</div>
-  <button class="btn btn-g" id="btnTest" onclick="printTest()" disabled>🧾 打印测试小票</button>
+  <div class="card-title">② 打印测试</div>
+  <button class="btn btn-g" id="btnTest" onclick="printTest()">🧾 打印测试小票</button>
   <div class="row" style="margin-top:8px">
-    <button class="btn btn-out" id="btnFeed" onclick="feed()" disabled>↓ 走纸</button>
-    <button class="btn btn-out" id="btnCut" onclick="cut()" disabled>✂️ 切纸</button>
+    <button class="btn btn-o" onclick="printSampleOrder()">📋 打印示例订单</button>
   </div>
-</div>
-
-<!-- 打印订单（模拟） -->
-<div class="card">
-  <div class="card-title">④ 模拟打印订单</div>
-  <button class="btn btn-o" id="btnOrder" onclick="printSampleOrder()" disabled>📋 打印示例订单</button>
-  <div class="note">模拟工厂端送り状格式，测试实际打印效果。</div>
 </div>
 
 <!-- 日志 -->
@@ -80,262 +74,199 @@ h1{font-size:18px;font-weight:800;color:var(--P);margin-bottom:2px}
 </div>
 
 <script>
-// ══ HPRT / ESC/POS 标准 UUID ══
-// Service: 0x18F0  Char Write: 0x2AF1
-const SVC_UUID  = '000018f0-0000-1000-8000-00805f9b34fb';
-const CHAR_UUID = '00002af1-0000-1000-8000-00805f9b34fb';
-// 备选（部分打印机）
-const SVC2  = '49535343-fe7d-4ae5-8fa9-9fafd205e455';
-const CHAR2 = '49535343-8841-43f4-a8d4-ecbe34729bb3';
+// ══ 配置 ══
+const WORKER_URL_KEY = 'hprt_worker_url';
 
-let device=null, charWrite=null;
-const CHARS_PER_LINE = 48; // 80mm
-
-// ── LOG ──
-let logLines=0;
-function log(msg,type=''){
-  const el=document.getElementById('log');
-  if(el.innerHTML==='等待操作...') el.innerHTML='';
-  const d=document.createElement('div');
-  d.className=type;
-  const t=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  d.textContent=`[${t}] ${msg}`;
-  el.appendChild(d);
-  el.scrollTop=el.scrollHeight;
-  logLines++;
-  document.getElementById('logCount').textContent=`(${logLines}条)`;
-}
-function clearLog(){document.getElementById('log').innerHTML='等待操作...';logLines=0;document.getElementById('logCount').textContent='';}
-
-// ── COMPAT ──
-window.addEventListener('load',()=>{
-  const el=document.getElementById('compatSt');
-  if(navigator.bluetooth){
-    el.className='status ok';
-    el.innerHTML='<div class="dot dot-g"></div><span>✅ 支持 Web Bluetooth，可以使用</span>';
-    log('Web Bluetooth 可用','ok');
-  } else {
-    el.className='status err';
-    el.innerHTML='<div class="dot dot-r"></div><span>❌ 不支持，请换用 Android Chrome</span>';
-    log('不支持 Web Bluetooth。请用 Android 的 Chrome 浏览器打开本页面','err');
-    document.getElementById('btnConn').disabled=true;
-  }
+// 自动恢复保存的Worker地址
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem(WORKER_URL_KEY);
+  if (saved) document.getElementById('workerUrl').value = saved;
 });
 
-// ── CONNECT ──
-async function connectPrinter(){
-  log('正在搜索蓝牙设备...','info');
+// ── LOG ──
+let logLines = 0;
+function log(msg, type='') {
+  const el = document.getElementById('log');
+  if (el.innerHTML === '等待操作...') el.innerHTML = '';
+  const d = document.createElement('div');
+  d.className = type;
+  const t = new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  d.textContent = `[${t}] ${msg}`;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+  logLines++;
+  document.getElementById('logCount').textContent = `(${logLines}条)`;
+}
+function clearLog() {
+  document.getElementById('log').innerHTML = '等待操作...';
+  logLines = 0;
+  document.getElementById('logCount').textContent = '';
+}
+
+// ── 获取配置 ──
+function getConfig() {
+  const workerUrl = document.getElementById('workerUrl').value.trim().replace(/\/$/, '');
+  const userKey = document.getElementById('userKey').value.trim();
+  const userSecret = document.getElementById('userSecret').value.trim();
+  const equipSn = document.getElementById('equipSn').value.trim();
+  if (!workerUrl) { log('请先填入Worker代理地址', 'err'); return null; }
+  if (!userKey || !userSecret || !equipSn) { log('请填写完整配置', 'err'); return null; }
+  localStorage.setItem(WORKER_URL_KEY, workerUrl);
+  return { workerUrl, userKey, userSecret, equipSn };
+}
+
+// ── 发送打印任务 ──
+async function sendPrint(content, orderNo = '') {
+  const cfg = getConfig();
+  if (!cfg) return false;
+
+  log(`发送打印任务... SN=${cfg.equipSn}`, 'info');
+
   try {
-    device = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: [SVC_UUID, SVC2]
+    const resp = await fetch(cfg.workerUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_key: cfg.userKey,
+        user_secret: cfg.userSecret,
+        equipment_sn: cfg.equipSn,
+        content: content,
+        print_type: 'ESC',
+        order_no: orderNo,
+      }),
     });
-    log(`找到设备: ${device.name||'(无名称)'}','ok');
-    device.addEventListener('gattserverdisconnected', onDisconn);
 
-    log('连接 GATT...','info');
-    const server = await device.gatt.connect();
-    log('GATT 连接成功','ok');
+    const result = await resp.json();
+    log(`响应: ${JSON.stringify(result)}`, result.status ? 'ok' : 'err');
 
-    charWrite = await getWriteChar(server);
-    if(!charWrite) throw new Error('找不到打印特征值，请检查打印机型号');
-
-    log(`✅ 打印机连接成功！特征值: ${charWrite.uuid.slice(0,8)}...`,'ok');
-    setConn(true);
-  } catch(e){
-    log(`连接失败: ${e.message}`,'err');
-    setConn(false);
-  }
-}
-
-async function getWriteChar(server){
-  // 1. 先试 HPRT 标准 UUID
-  for(const [svcId, charId] of [[SVC_UUID,CHAR_UUID],[SVC2,CHAR2]]){
-    try {
-      log(`尝试服务 ${svcId.slice(4,8)}...`,'info');
-      const svc = await server.getPrimaryService(svcId);
-      const c = await svc.getCharacteristic(charId);
-      if(c.properties.write||c.properties.writeWithoutResponse){
-        log(`找到标准写入特征值 ✓`,'ok'); return c;
-      }
-    } catch(e){ log(`服务 ${svcId.slice(4,8)} 不可用`) }
-  }
-  // 2. 扫描所有服务，找第一个可写特征值
-  log('扫描所有服务...','info');
-  try {
-    const services = await server.getPrimaryServices();
-    log(`共 ${services.length} 个服务`,'info');
-    for(const svc of services){
-      const chars = await svc.getCharacteristics();
-      for(const c of chars){
-        log(`  ${svc.uuid.slice(0,8)}... / ${c.uuid.slice(0,8)}... w=${c.properties.write} wr=${c.properties.writeWithoutResponse}`);
-        if(c.properties.write||c.properties.writeWithoutResponse){
-          log(`自动找到可写特征值 ✓`,'ok'); return c;
-        }
-      }
+    if (result.status) {
+      log('✅ 打印任务发送成功！', 'ok');
+      return true;
+    } else {
+      log(`❌ 打印失败: ${result.msg || '未知错误'}`, 'err');
+      return false;
     }
-  } catch(e){ log(`扫描失败: ${e.message}`,'err') }
-  return null;
-}
-
-function onDisconn(){
-  log('打印机断开连接','warn');
-  setConn(false); charWrite=null;
-}
-async function disconnect(){
-  device?.gatt?.disconnect();
-  log('已断开连接','info');
-}
-function setConn(ok){
-  const s=document.getElementById('connSt');
-  const btnC=document.getElementById('btnConn');
-  const btnD=document.getElementById('btnDisc');
-  const ids=['btnTest','btnFeed','btnCut','btnOrder'];
-  if(ok){
-    s.className='status ok';
-    s.innerHTML=`<div class="dot dot-g"></div><span>✅ 已连接: ${device?.name||'TP80NY'}</span>`;
-    btnC.style.display='none'; btnD.style.display='flex';
-    ids.forEach(id=>document.getElementById(id).disabled=false);
-  } else {
-    s.className='status warn';
-    s.innerHTML='<div class="dot dot-o"></div><span>未连接</span>';
-    btnC.style.display='flex'; btnD.style.display='none';
-    ids.forEach(id=>document.getElementById(id).disabled=true);
-  }
-}
-
-// ── ESC/POS ──
-const enc = new TextEncoder();
-function bytes(...b){ return new Uint8Array(b) }
-const CMD = {
-  init:   ()=>bytes(0x1B,0x40),
-  lf:     ()=>bytes(0x0A),
-  feed:   (n)=>bytes(0x1B,0x64,n),
-  cut:    ()=>bytes(0x1D,0x56,0x42,0x00),
-  center: ()=>bytes(0x1B,0x61,0x01),
-  left:   ()=>bytes(0x1B,0x61,0x00),
-  right:  ()=>bytes(0x1B,0x61,0x02),
-  bold1:  ()=>bytes(0x1B,0x45,0x01),
-  bold0:  ()=>bytes(0x1B,0x45,0x00),
-  dbl:    ()=>bytes(0x1D,0x21,0x11), // double size
-  normal: ()=>bytes(0x1D,0x21,0x00),
-  encode: (charset)=>bytes(0x1B,0x74,charset), // 0=PC437,1=Katakana
-};
-function txt(s){ return enc.encode(s) }
-function line(s=''){ return enc.encode(s+'\n') }
-function divider(){ return line('─'.repeat(CHARS_PER_LINE)) }  // works if printer supports UTF8
-function dasher(){ return line('-'.repeat(CHARS_PER_LINE)) }
-function pad2col(left,right,width){
-  const sp=Math.max(1,width-left.length-right.length);
-  return left+' '.repeat(sp)+right;
-}
-
-function concat(...arrs){
-  let len=0; arrs.forEach(a=>len+=a.length);
-  const out=new Uint8Array(len); let i=0;
-  arrs.forEach(a=>{out.set(a,i);i+=a.length});
-  return out;
-}
-
-async function send(data){
-  if(!charWrite){log('未连接','err');return false}
-  const CHUNK=100;
-  try {
-    for(let i=0;i<data.length;i+=CHUNK){
-      const chunk=data.slice(i,i+CHUNK);
-      if(charWrite.properties.writeWithoutResponse){
-        await charWrite.writeValueWithoutResponse(chunk);
-      } else {
-        await charWrite.writeValue(chunk);
-      }
-      await new Promise(r=>setTimeout(r,30));
-    }
-    return true;
-  } catch(e){
-    log(`发送错误: ${e.message}`,'err');
+  } catch(e) {
+    log(`❌ 请求错误: ${e.message}`, 'err');
     return false;
   }
 }
 
-// ── PRINT FUNCTIONS ──
-async function feed(){
-  await send(concat(CMD.feed(4)));
-  log('走纸完成','ok');
-}
-async function cut(){
-  await send(concat(CMD.feed(2),CMD.cut()));
-  log('切纸完成','ok');
-}
-
-async function printTest(){
-  log('打印测试小票...','info');
-  const now=new Date().toLocaleString('zh-CN');
-  const data=concat(
-    CMD.init(),
-    CMD.center(), CMD.dbl(), CMD.bold1(),
-    line('受発注システム'),
-    CMD.normal(), CMD.bold0(),
-    dasher(),
-    line(now),
-    dasher(),
-    CMD.left(),
-    line(pad2col('干豆腐  500g/袋','x2',CHARS_PER_LINE)),
-    line(pad2col('  单价 Y300',    'Y600',CHARS_PER_LINE)),
-    line(pad2col('国産牛ロース 200g×5','x1',CHARS_PER_LINE)),
-    line(pad2col('  单价 Y2800',   'Y2800',CHARS_PER_LINE)),
-    dasher(),
-    CMD.right(), CMD.bold1(),
-    line('TOTAL: Y3,400 (incl.tax)'),
-    CMD.bold0(), CMD.center(),
-    line(''),
-    line('Print Test OK!'),
-    line('Web Bluetooth + ESC/POS'),
-    CMD.feed(3),
-    CMD.cut()
-  );
-  const ok=await send(data);
-  if(ok) log('✅ 测试小票打印完成！','ok');
+// ── 测试连接 ──
+async function testConnection() {
+  const cfg = getConfig();
+  if (!cfg) return;
+  log('测试连接中...', 'info');
+  // 发送一个简单的测试内容
+  const content = buildText([
+    { text: '连接测试', align: 'center', bold: true, size: 'large' },
+    { text: '─────────────────', align: 'center' },
+    { text: `时间: ${new Date().toLocaleString('zh-CN')}` },
+    { text: `SN: ${cfg.equipSn}` },
+    { text: '连接成功！', align: 'center', bold: true },
+  ]);
+  await sendPrint(content, 'test_' + Date.now());
 }
 
-async function printSampleOrder(){
-  log('打印示例订单...','info');
-  const date=new Date().toLocaleDateString('zh-CN');
-  const data=concat(
-    CMD.init(),
-    CMD.center(), CMD.dbl(), CMD.bold1(),
-    line('  送 り 状'),
-    CMD.normal(), CMD.bold0(),
-    dasher(),
-    CMD.left(),
-    line(pad2col('注文番号:','#12',CHARS_PER_LINE)),
-    line(pad2col('店舗名:','銀座店',CHARS_PER_LINE)),
-    line(pad2col('日付:',date,CHARS_PER_LINE)),
-    line(pad2col('ステータス:','出荷済',CHARS_PER_LINE)),
-    dasher(),
-    CMD.bold1(), line(pad2col('商品','数量    金額',CHARS_PER_LINE)), CMD.bold0(),
-    dasher(),
-    line('干豆腐 500g/袋'),
-    line(pad2col('  単価 Y300','x2   Y600',CHARS_PER_LINE)),
-    line('豚バラスライス 300g'),
-    line(pad2col('  単価 Y680','x3   Y2040',CHARS_PER_LINE)),
-    line('鶏もも肉 500g'),
-    line(pad2col('  単価 Y480','x1   Y480',CHARS_PER_LINE)),
-    dasher(),
-    line(pad2col('小計','Y3120',CHARS_PER_LINE)),
-    line(pad2col('消費税(8%)','Y249',CHARS_PER_LINE)),
-    CMD.bold1(), CMD.dbl(),
-    CMD.center(),
-    line('Y3,369'),
-    CMD.normal(), CMD.bold0(), CMD.left(),
-    dasher(),
-    line('受取サイン:'),
-    line(''),
-    line('日付:'),
-    CMD.feed(3),
-    CMD.cut()
-  );
-  const ok=await send(data);
-  if(ok) log('✅ 示例订单打印完成！','ok');
+// ── ESC内容构建器 ──
+// 汉印云ESC格式: <Sp W=0x00 H=0x00>文字<BR><DefineCut>
+function buildText(lines) {
+  // 汉印云ESC文本格式
+  let content = '<Sp W=0x00 H=0x00>';
+  
+  for (const line of lines) {
+    const text = line.text || '';
+    const align = line.align || 'left';
+    const bold = line.bold || false;
+    const size = line.size || 'normal'; // normal / large
+    
+    let str = '';
+    
+    // 对齐
+    if (align === 'center') str += '<center>';
+    else if (align === 'right') str += '<right>';
+    else str += '<left>';
+    
+    // 加粗
+    if (bold) str += '<bold>';
+    
+    // 字体大小
+    if (size === 'large') str += '<FontSize W=2 H=2>';
+    
+    str += text;
+    
+    // 结束标签
+    if (size === 'large') str += '<FontSize W=1 H=1>';
+    if (bold) str += '</bold>';
+    str += '<BR>';
+    
+    content += str;
+  }
+  
+  content += '<DefineCut>';
+  return content;
+}
+
+// ── 打印测试小票 ──
+async function printTest() {
+  log('准备打印测试小票...', 'info');
+  const now = new Date().toLocaleString('zh-CN');
+  
+  const content = buildText([
+    { text: '受発注システム', align: 'center', bold: true, size: 'large' },
+    { text: '────────────────', align: 'center' },
+    { text: now, align: 'center' },
+    { text: '────────────────', align: 'center' },
+    { text: '干豆腐  500g/袋         x2' },
+    { text: '  単価 ¥300         ¥600' },
+    { text: '国産牛ロース 200g      x1' },
+    { text: '  単価 ¥2800       ¥2800' },
+    { text: '────────────────', align: 'center' },
+    { text: 'TOTAL: ¥3,400', align: 'right', bold: true },
+    { text: '', },
+    { text: 'Cloud Print Test OK!', align: 'center' },
+    { text: '汉印云 + ESC格式', align: 'center' },
+    { text: '', },
+    { text: '', },
+  ]);
+  
+  await sendPrint(content, 'test_' + Date.now());
+}
+
+// ── 打印示例订单 ──
+async function printSampleOrder() {
+  log('准备打印示例订单...', 'info');
+  const date = new Date().toLocaleDateString('zh-CN');
+  
+  const content = buildText([
+    { text: '送  り  状', align: 'center', bold: true, size: 'large' },
+    { text: '────────────────', align: 'center' },
+    { text: `注文番号: #12` },
+    { text: `店舗名:   銀座店` },
+    { text: `日付:     ${date}` },
+    { text: `状態:     出荷済` },
+    { text: '────────────────', align: 'center' },
+    { text: '商品             数量  金額', bold: true },
+    { text: '────────────────', align: 'center' },
+    { text: '干豆腐 500g/袋' },
+    { text: '  単価¥300      x2    ¥600' },
+    { text: '豚バラスライス 300g' },
+    { text: '  単価¥680      x3   ¥2040' },
+    { text: '鶏もも肉 500g' },
+    { text: '  単価¥480      x1    ¥480' },
+    { text: '────────────────', align: 'center' },
+    { text: '小計:          ¥3120', align: 'right' },
+    { text: '消費税(8%):     ¥249', align: 'right' },
+    { text: '合計:          ¥3369', align: 'right', bold: true, size: 'large' },
+    { text: '────────────────', align: 'center' },
+    { text: '受取サイン:' },
+    { text: '' },
+    { text: '日付:' },
+    { text: '' },
+    { text: '' },
+  ]);
+  
+  await sendPrint(content, 'order_' + Date.now());
 }
 </script>
 </body>
