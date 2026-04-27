@@ -917,7 +917,7 @@ async function uploadProductImage(){const fileInput=document.getElementById('pIm
 document.querySelectorAll('.modal-overlay').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('active');});});
 
 // ═══════════════════════════════════════════════
-// 納品書 云打印模块
+// 納品書 云打印模块 v2 - 改善对齐
 // ═══════════════════════════════════════════════
 
 const PRINT_CONFIG = {
@@ -925,10 +925,35 @@ const PRINT_CONFIG = {
   userKey:   'f4dedc24818d11f0840a043f72a0b6f2',
   userSecret:'f4deeb55818d11f0840a043f72a0b6f2',
   equipSn:   'TP80NY1525310584',
-  // 発行元固定情報
   senderName: '金澤国際株式会社取手工場',
   senderTel:  '03-1234-5678',
 };
+
+// 文字幅計算（全角=2, 半角=1）
+function strWidth(s) {
+  let w = 0;
+  for (const c of String(s)) {
+    w += (c.match(/[\u3000-\u9fff\uf900-\ufaff\ufe30-\ufe4f\uff01-\uff60\uffe0-\uffe6]/) || c.charCodeAt(0) > 0x7f) ? 2 : 1;
+  }
+  return w;
+}
+
+// 右パディング（幅基準）
+function rPad(s, w) {
+  s = String(s);
+  const sw = strWidth(s);
+  return s + ' '.repeat(Math.max(0, w - sw));
+}
+
+// 左パディング（幅基準）
+function lPad(s, w) {
+  s = String(s);
+  const sw = strWidth(s);
+  return ' '.repeat(Math.max(0, w - sw)) + s;
+}
+
+// 区切り線 全角48文字幅
+function divLine(c='-') { return c.repeat(32); }
 
 // ESCコンテンツビルダー
 function buildPrintContent(lines) {
@@ -938,17 +963,14 @@ function buildPrintContent(lines) {
     const align = line.align || 'left';
     const bold  = line.bold  || false;
     const large = line.large || false;
-    const xl    = line.xl    || false;
     let str = '';
     if (align==='center') str += '<center>';
     else if (align==='right') str += '<right>';
     else str += '<left>';
     if (bold)  str += '<bold>';
-    if (xl)    str += '<FontSize W=2 H=2>';
-    else if (large) str += '<FontSize W=1 H=2>';
+    if (large) str += '<FontSize W=2 H=2>';
     str += text;
-    if (xl)    str += '<FontSize W=1 H=1>';
-    else if (large) str += '<FontSize W=1 H=1>';
+    if (large) str += '<FontSize W=1 H=1>';
     if (bold)  str += '</bold>';
     str += '<BR>';
     content += str;
@@ -957,87 +979,93 @@ function buildPrintContent(lines) {
   return content;
 }
 
-// 固定幅テキスト整形（80mm = 全角24文字 = 半角48文字）
-const W = 48; // 半角換算幅
-function padR(s, w) { s = String(s); return s + ' '.repeat(Math.max(0, w - s.length)); }
-function padL(s, w) { s = String(s); return ' '.repeat(Math.max(0, w - s.length)) + s; }
-
-// 区切り線
-function divLine(char='-') { return char.repeat(W); }
-
-// 納品書1ページ分のlines生成
+// 納品書1ページ生成
 function buildNobinshoPage(order, shopInfo, items, pageNum, totalPages) {
-  const lj = currentLang === 'zh';
-  const date = new Date().toLocaleDateString('ja-JP', {year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'/');
+  const date = new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'});
   const orderDate = order.order_date || '';
   const shopName = displayName(order.shop_name) || order.shop_id;
   const shopAddr = shopInfo?.address || '';
   const note = order.note || '';
-
   const lines = [];
 
-  // ページ番号（右上）
+  // ── ページ番号（右上）──
   if (totalPages > 1) {
-    lines.push({ text: padL(`${pageNum}/${totalPages}`, W), align:'left' });
+    lines.push({ text: lPad(`${pageNum}/${totalPages}`, 32), bold:false });
   }
 
-  // タイトル
-  lines.push({ text: '　納　品　書', align:'center', bold:true, xl:true });
-  lines.push({ text: divLine('━'), align:'left' });
+  // ── タイトル ──
+  lines.push({ text: divLine('─'), align:'center' });
+  lines.push({ text: '納　品　書', align:'center', bold:true, large:true });
+  lines.push({ text: divLine('─'), align:'center' });
 
-  // 発行情報
-  lines.push({ text: `発行日　　: ${date}` });
-  lines.push({ text: `伝票番号　: NO.${orderDate.replace(/-/g,'')}-${String(order.order_no).padStart(3,'0')}` });
-  lines.push({ text: `納品日　　: ${orderDate}` });
-  lines.push({ text: divLine(), align:'left' });
+  // ── 発行情報 ──
+  lines.push({ text: `発行日　: ${date}` });
+  lines.push({ text: `伝票番号: NO.${orderDate.replace(/-/g,'')}-${String(order.order_no).padStart(3,'0')}` });
+  lines.push({ text: `納品日　: ${orderDate}` });
+  lines.push({ text: divLine('- '), align:'left' });
 
-  // 納品先
-  lines.push({ text: `お得意先名: ${shopName}`, bold:true });
-  if (shopAddr) {
-    lines.push({ text: `住　所　　: ${shopAddr}` });
-  }
-  lines.push({ text: divLine(), align:'left' });
+  // ── 納品先 ──
+  lines.push({ text: `お得意先: ${shopName}`, bold:true });
+  if (shopAddr) lines.push({ text: `住　所　: ${shopAddr}` });
+  lines.push({ text: divLine('- '), align:'left' });
 
-  // 発行元
-  lines.push({ text: `発行元　　: ${PRINT_CONFIG.senderName}` });
-  lines.push({ text: `TEL　　　 : ${PRINT_CONFIG.senderTel}` });
-  lines.push({ text: divLine('━'), align:'left' });
+  // ── 発行元 ──
+  lines.push({ text: `発行元　: ${PRINT_CONFIG.senderName}` });
+  lines.push({ text: `TEL　　 : ${PRINT_CONFIG.senderTel}` });
+  lines.push({ text: divLine('─'), align:'center' });
 
-  // 商品テーブルヘッダー
-  // 商品名(20) 数量(4) 単価(8) 金額(8) = 40
-  const hName = padR('商品名', 20);
-  const hQty  = padL('数量', 4);
-  const hPri  = padL('単価', 7);
-  const hAmt  = padL('金額', 8);
-  lines.push({ text: `${hName}${hQty}${hPri}${hAmt}`, bold:true });
-  lines.push({ text: divLine(), align:'left' });
+  // ── 商品テーブルヘッダー ──
+  // レイアウト: 商品名(16文字幅) 数量(4) 単価(8) 金額(8) = 36幅
+  const COL_NAME = 16; // 全角8文字
+  const COL_QTY  = 4;
+  const COL_PRI  = 8;
+  const COL_AMT  = 8;
+  lines.push({
+    text: rPad('商品名', COL_NAME) + lPad('数量', COL_QTY) + lPad('単価', COL_PRI) + lPad('金額', COL_AMT),
+    bold: true
+  });
+  lines.push({ text: divLine('-'), align:'left' });
 
-  // 商品行
-  let pageSub = 0;
+  // ── 商品行 ──
   items.forEach(item => {
-    const qty = item.qty || 0;
+    const qty   = item.qty || 0;
     const price = item.unit_price || 0;
-    const amt = price * qty;
-    pageSub += amt;
+    const amt   = price * qty;
+    // 商品名 + 規格を結合（16幅に収める）
+    const nameSpec = `${item.product_name}${item.product_spec?' '+item.product_spec:''}`;
+    const nameW = strWidth(nameSpec);
 
-    const name = (item.product_name || '').slice(0, 18);
-    const spec = (item.product_spec || '').slice(0, 18);
-    const qtyStr  = padL(String(qty), 4);
-    const priStr  = padL(`¥${Math.round(price).toLocaleString()}`, 7);
-    const amtStr  = padL(`¥${Math.round(amt).toLocaleString()}`, 8);
-
-    lines.push({ text: `${padR(name, 20)}${qtyStr}${priStr}${amtStr}` });
-    if (spec) {
-      lines.push({ text: `  ${spec}` });
+    if (nameW <= COL_NAME) {
+      // 1行に収まる場合
+      lines.push({
+        text: rPad(nameSpec, COL_NAME)
+            + lPad(String(qty), COL_QTY)
+            + lPad(`¥${Math.round(price).toLocaleString()}`, COL_PRI)
+            + lPad(`¥${Math.round(amt).toLocaleString()}`, COL_AMT)
+      });
+    } else {
+      // 商品名が長い場合は2行に分割
+      const name16 = nameSpec.slice(0, 8); // 全角8文字まで
+      lines.push({
+        text: rPad(name16, COL_NAME)
+            + lPad(String(qty), COL_QTY)
+            + lPad(`¥${Math.round(price).toLocaleString()}`, COL_PRI)
+            + lPad(`¥${Math.round(amt).toLocaleString()}`, COL_AMT)
+      });
+      // 残りの商品名を2行目に
+      const remain = nameSpec.slice(8);
+      if (remain) lines.push({ text: `  ${remain}` });
+    }
+    // 欠品マーク
+    if (item.shortage) {
+      lines.push({ text: `  ⚠ 欠品${item.shortage_note?'：'+item.shortage_note:''}`, bold:true });
     }
   });
 
-  lines.push({ text: divLine(), align:'left' });
+  lines.push({ text: divLine('-'), align:'left' });
 
-  // 最終ページのみ合計表示
-  const isLastPage = pageNum === totalPages;
-  if (isLastPage) {
-    // 全商品の合計計算
+  // ── 最終ページのみ合計 ──
+  if (pageNum === totalPages) {
     const allItems = order.order_items || [];
     let totalSub = 0, totalTax = 0;
     allItems.forEach(i => {
@@ -1045,44 +1073,30 @@ function buildNobinshoPage(order, shopInfo, items, pageNum, totalPages) {
       totalSub += lp;
       totalTax += Math.round(lp*(i.tax_rate||0)/100);
     });
-
-    lines.push({ text: padL(`小計　　　　　 ¥${Math.round(totalSub).toLocaleString()}`, W) });
-    lines.push({ text: divLine('-'), align:'left' });
-    lines.push({ text: padL(`消費税　　　　 ¥${Math.round(totalTax).toLocaleString()}`, W) });
-    lines.push({ text: divLine('━'), align:'left' });
-    lines.push({ text: padL(`合計　 ¥${Math.round(totalSub+totalTax).toLocaleString()}`, W), bold:true, xl:true });
-    lines.push({ text: divLine('━'), align:'left' });
-
-    // 備考
+    lines.push({ text: lPad(`小計　　　　 ¥${Math.round(totalSub).toLocaleString()}`, 32) });
+    lines.push({ text: '- '.repeat(16), align:'left' });
+    lines.push({ text: lPad(`消費税　　　 ¥${Math.round(totalTax).toLocaleString()}`, 32) });
+    lines.push({ text: divLine('─'), align:'center' });
+    lines.push({ text: lPad(`合　計  ¥${Math.round(totalSub+totalTax).toLocaleString()}`, 32), bold:true, large:true });
+    lines.push({ text: divLine('─'), align:'center' });
     if (note) {
       lines.push({ text: '【備考】', bold:true });
       lines.push({ text: note });
-      lines.push({ text: divLine(), align:'left' });
+      lines.push({ text: divLine('-'), align:'left' });
     }
   } else {
-    lines.push({ text: `　　　　　　　　　　　　　→次ページへ続く` });
+    lines.push({ text: lPad('→次ページへ続く', 32) });
   }
-
   lines.push({ text: '' });
   lines.push({ text: '' });
-
   return lines;
 }
 
 // 納品書打印（複数ページ対応）
 async function printNobinsho(orderId) {
   showLoading(currentLang==='zh'?'准备打印...':'印刷準備中...');
-
-  // 注文データ取得
-  const { data:order } = await sb.from('orders')
-    .select('*, order_items(*)')
-    .eq('id', orderId).single();
-
-  // 店舗住所取得
-  const { data:shopData } = await sb.from('users')
-    .select('id,name,address')
-    .eq('id', order?.shop_id).single();
-
+  const { data:order } = await sb.from('orders').select('*, order_items(*)').eq('id', orderId).single();
+  const { data:shopData } = await sb.from('users').select('id,name,address').eq('id', order?.shop_id).single();
   hideLoading();
   if (!order) { alert('データが見つかりません'); return; }
 
@@ -1090,64 +1104,39 @@ async function printNobinsho(orderId) {
   const ITEMS_PER_PAGE = 10;
   const totalPages = Math.max(1, Math.ceil(allItems.length / ITEMS_PER_PAGE));
 
-  // ページ毎に印刷
   for (let p = 0; p < totalPages; p++) {
     const pageItems = allItems.slice(p * ITEMS_PER_PAGE, (p+1) * ITEMS_PER_PAGE);
     const pageLines = buildNobinshoPage(order, shopData, pageItems, p+1, totalPages);
     const content = buildPrintContent(pageLines);
-
     const ok = await cloudPrint(content, `order_${order.order_no}_p${p+1}`);
     if (!ok) break;
-
-    // ページ間に少し待機
-    if (p < totalPages - 1) {
-      await new Promise(r => setTimeout(r, 1500));
-    }
+    if (p < totalPages - 1) await new Promise(r => setTimeout(r, 1500));
   }
 }
 
-// 云打印送信
 async function cloudPrint(content, orderNo='') {
   const url = PRINT_CONFIG.workerUrl;
   if (!url) {
-    const ok = confirm(currentLang==='zh'
-      ? '请先设置Worker地址，是否现在设置？'
-      : 'Worker URLを設定してください。今すぐ設定しますか？');
+    const ok = confirm(currentLang==='zh'?'请先设置Worker地址，是否现在设置？':'Worker URLを設定してください。今すぐ設定しますか？');
     if (ok) openPrintSettings();
     return false;
   }
   try {
     showLoading(currentLang==='zh'?'发送打印中...':'印刷送信中...');
     const resp = await fetch(url, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        user_key:PRINT_CONFIG.userKey,
-        user_secret:PRINT_CONFIG.userSecret,
-        equipment_sn:PRINT_CONFIG.equipSn,
-        content, print_type:'ESC', order_no:orderNo,
-      }),
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({user_key:PRINT_CONFIG.userKey,user_secret:PRINT_CONFIG.userSecret,equipment_sn:PRINT_CONFIG.equipSn,content,print_type:'ESC',order_no:orderNo}),
     });
     hideLoading();
     const result = await resp.json();
     if (result.status) return true;
-    else { alert(`❌ ${result.msg||(currentLang==='zh'?'打印失败':'印刷失敗')}`); return false; }
-  } catch(e) {
-    hideLoading();
-    alert(`❌ ${e.message}`);
-    return false;
-  }
+    alert(`❌ ${result.msg||'印刷失敗'}`); return false;
+  } catch(e) { hideLoading(); alert(`❌ ${e.message}`); return false; }
 }
 
-// 打印設定
 function openPrintSettings() {
   const current = PRINT_CONFIG.workerUrl;
-  const url = prompt(
-    currentLang==='zh'
-      ? `Worker代理地址：\n当前: ${current||'未设置'}`
-      : `Worker URL：\n現在: ${current||'未設定'}`,
-    current
-  );
+  const url = prompt(currentLang==='zh'?`Worker代理地址：\n当前: ${current||'未设置'}`:`Worker URL：\n現在: ${current||'未設定'}`, current);
   if (url !== null) {
     PRINT_CONFIG.workerUrl = url.trim();
     localStorage.setItem('hprt_worker_url', url.trim());
@@ -1155,10 +1144,7 @@ function openPrintSettings() {
   }
 }
 
-// 旧printDeliveryOrderは削除（printNobinshoに統合）
-async function printDeliveryOrder(orderId) {
-  await printNobinsho(orderId);
-}
+async function printDeliveryOrder(orderId) { await printNobinsho(orderId); }
 
 </script>
 </body>
