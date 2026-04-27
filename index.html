@@ -817,7 +817,7 @@ tr:hover td{background:var(--bg);}
     <div class="container">
       <div class="section-header">
         <div class="section-title"><span class="ja">配送管理</span><span class="sep"> / </span><span class="zh">配送管理</span></div>
-        <select class="filter-select" id="delivDateFilter" onchange="renderDelivery()"><option value="" id="delivDateAll">全日付 / 全部</option></select>
+        <select class="filter-select" id="delivDateFilter" onchange="renderDelivery()"><option value="" id="delivDateAll">全日付 / 全部</option></select><button class="btn btn-outline btn-sm" onclick="openPrintSettings()">🖨️ <span class="ja">印刷設定</span><span class="zh">打印设置</span></button>
       </div>
       <div id="deliveryList"></div>
     </div>
@@ -2275,7 +2275,6 @@ async function renderDelivery() {
   const fd = dEl.value;
   let filtered = fd ? (orders||[]).filter(o=>o.order_date===fd) : (orders||[]);
 
-  // Apply saved sort order
   if (delivSortOrder.length) {
     filtered.sort((a,b) => {
       const ia = delivSortOrder.indexOf(a.id);
@@ -2286,6 +2285,88 @@ async function renderDelivery() {
       return ia - ib;
     });
   }
+
+  const el = document.getElementById('deliveryList');
+  if (!filtered.length) { el.innerHTML = `<div class="no-data">${currentLang==='zh'?'暂无配送订单':'配送対象なし'}</div>`; return; }
+
+  el.innerHTML = `
+  <div class="alert alert-info" style="margin-bottom:12px;font-size:13px;">
+    ☰ <span class="ja">ドラッグで配送順を変更できます</span><span class="zh">拖拽卡片可以调整配送顺序</span>
+  </div>` +
+  filtered.map(order => {
+    const si = statusInfo(order.status);
+    return `
+    <div class="order-item deli-card" data-id="${order.id}" draggable="true"
+      ondragstart="onDeliDragStart(event,this)" ondragover="onDeliDragOver(event,this)"
+      ondrop="onDeliDrop(event)" ondragend="onDeliDragEnd()"
+      style="cursor:grab;touch-action:auto;">
+      <div class="order-item-header" onclick="toggleBody('dv_${order.id}')">
+        <span style="font-size:18px;color:var(--text3);cursor:grab;padding-right:4px;">⠿</span>
+        <div class="order-no">#${order.order_no}</div>
+        <div class="order-shop-name">🏪 ${displayName(order.shop_name)}</div>
+        <div class="order-date" style="font-size:11px;">${order.order_date}</div>
+        <span class="badge badge-${si.c}">${si.l}</span>
+        <div class="order-amount">${fmt(order.total)}</div>
+        <span style="color:var(--text3);font-size:12px;">▼</span>
+      </div>
+      <div class="order-body" id="dv_${order.id}">
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">
+          ${(order.order_items||[]).map(item=>`
+          <div style="background:${item.shortage?'#fff1f2':'var(--bg)'};border:1.5px solid ${item.shortage?'#fca5a5':'var(--border)'};border-radius:10px;padding:12px 14px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+              <span style="font-size:28px;line-height:1;">${item.product_emoji||'📦'}</span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:15px;font-weight:700;">${item.product_name}</div>
+                <div style="font-size:12px;color:var(--text3);margin-top:2px;">${item.product_spec}</div>
+              </div>
+              <div style="background:var(--red-light);border-radius:8px;padding:6px 14px;text-align:center;flex-shrink:0;">
+                <div style="font-size:22px;font-weight:900;color:var(--red);line-height:1;">${item.qty}</div>
+                <div style="font-size:10px;color:var(--text3);"><span class="ja">個</span><span class="zh">个</span></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;
+                background:${item.shortage?'#fee2e2':'white'};
+                border:1.5px solid ${item.shortage?'#f87171':'var(--border)'};
+                border-radius:8px;padding:8px 12px;flex:1;min-width:130px;">
+                <input type="checkbox" ${item.shortage?'checked':''} onchange="delivShortage('${item.id}',this.checked)"
+                  style="width:20px;height:20px;cursor:pointer;accent-color:#2563eb;flex-shrink:0;">
+                <span style="font-size:13px;font-weight:700;color:${item.shortage?'#dc2626':'var(--text2)'};">
+                  <span class="ja">欠品あり</span><span class="zh">缺货</span>
+                </span>
+              </label>
+              <input style="flex:1;min-width:120px;padding:8px 12px;border:1.5px solid var(--border);
+                border-radius:8px;font-size:13px;font-family:inherit;background:white;"
+                placeholder="備考 / 备注..."
+                value="${item.shortage_note||''}"
+                onchange="delivShortagNote('${item.id}',this.value)">
+            </div>
+          </div>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="printDeliveryOrder('${order.id}')"
+            style="flex:1;padding:13px;background:#7c3aed;color:white;border:none;
+            border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;
+            display:flex;align-items:center;justify-content:center;gap:6px;">
+            🖨️ <span class="ja">印刷</span><span class="zh">打印</span>
+          </button>
+          ${order.status!=='delivered'?`
+          <button onclick="markDelivered('${order.id}')"
+            style="flex:1;padding:13px;background:var(--green);color:white;border:none;
+            border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;
+            display:flex;align-items:center;justify-content:center;gap:6px;">
+            ✅ <span class="ja">配送完了</span><span class="zh">配送完成</span>
+          </button>`:''}
+          ${order.status==='delivered'?`<div style="flex:1;text-align:center;padding:10px;background:var(--green-light);border-radius:8px;color:var(--green);font-weight:700;">
+            ✓ <span class="ja">配達完了済み</span><span class="zh">已完成</span>
+          </div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  initDeliTouchSort();
+}
 
   const el = document.getElementById('deliveryList');
   if (!filtered.length) { el.innerHTML = `<div class="no-data">${currentLang==='zh'?'暂无配送订单':'配送対象なし'}</div>`; return; }
@@ -2933,6 +3014,152 @@ async function uploadProductImage() {
 document.querySelectorAll('.modal-overlay').forEach(el=>{
   el.addEventListener('click', e=>{ if(e.target===el) el.classList.remove('active'); });
 });
+// ── 云打印配置 ──
+const PRINT_CONFIG = {
+  workerUrl: localStorage.getItem('hprt_worker_url') || '',
+  userKey:   'f4dedc24818d11f0840a043f72a0b6f2',
+  userSecret:'f4deeb55818d11f0840a043f72a0b6f2',
+  equipSn:   'TP80NY1525310584',
+};
+
+function buildPrintContent(lines) {
+  let content = '<Sp W=0x00 H=0x00>';
+  for (const line of lines) {
+    const text  = line.text  !== undefined ? line.text : '';
+    const align = line.align || 'left';
+    const bold  = line.bold  || false;
+    const large = line.large || false;
+    let str = '';
+    if (align==='center') str += '<center>';
+    else if (align==='right') str += '<right>';
+    else str += '<left>';
+    if (bold)  str += '<bold>';
+    if (large) str += '<FontSize W=2 H=2>';
+    str += text;
+    if (large) str += '<FontSize W=1 H=1>';
+    if (bold)  str += '</bold>';
+    str += '<BR>';
+    content += str;
+  }
+  content += '<DefineCut>';
+  return content;
+}
+
+async function cloudPrint(content, orderNo='') {
+  const url = PRINT_CONFIG.workerUrl;
+  if (!url) {
+    const ok = confirm(currentLang==='zh'
+      ? '请先设置Worker地址，是否现在设置？'
+      : 'Worker URLを設定してください。今すぐ設定しますか？');
+    if (ok) openPrintSettings();
+    return false;
+  }
+  try {
+    showLoading(currentLang==='zh'?'发送打印中...':'印刷送信中...');
+    const resp = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        user_key:PRINT_CONFIG.userKey,
+        user_secret:PRINT_CONFIG.userSecret,
+        equipment_sn:PRINT_CONFIG.equipSn,
+        content, print_type:'ESC', order_no:orderNo,
+      }),
+    });
+    hideLoading();
+    const result = await resp.json();
+    if (result.status) {
+      alert(currentLang==='zh'?'✅ 打印成功！':'✅ 印刷しました！');
+      return true;
+    } else {
+      alert(`❌ ${result.msg||(currentLang==='zh'?'打印失败':'印刷失敗')}`);
+      return false;
+    }
+  } catch(e) {
+    hideLoading();
+    alert(`❌ ${e.message}`);
+    return false;
+  }
+}
+
+function buildDeliveryTicket(order) {
+  const items    = order.order_items || [];
+  const lj       = currentLang === 'zh';
+  const shopName = displayName(order.shop_name) || order.shop_id;
+  const div      = '────────────────';
+  let sub=0, tax=0;
+  items.forEach(i => {
+    const lp=(i.unit_price||0)*(i.qty||0);
+    sub+=lp; tax+=Math.round(lp*(i.tax_rate||0)/100);
+  });
+  const lines = [
+    { text:lj?'送 货 单':'送  り  状', align:'center', bold:true, large:true },
+    { text:div, align:'center' },
+    { text:`${lj?'订单号':'注文番号'}: #${order.order_no}` },
+    { text:`${lj?'店铺'  :'店舗名'  }: ${shopName}` },
+    { text:`${lj?'日期'  :'日付'    }: ${order.order_date}` },
+    { text:`${lj?'状态'  :'状態'    }: ${statusInfo(order.status).l}` },
+  ];
+  if (order.note) {
+    lines.push({ text:div, align:'center' });
+    lines.push({ text:`${lj?'备注':'備考'}: ${order.note}` });
+  }
+  lines.push({ text:div, align:'center' });
+  lines.push({ text:lj?'商品              数量    金额':'商品              数量    金額', bold:true });
+  lines.push({ text:div, align:'center' });
+  items.forEach(item => {
+    const qty=item.qty||0;
+    const lp=(item.unit_price||0)*qty;
+    lines.push({ text:`${item.product_emoji||''} ${item.product_name}` });
+    lines.push({ text:`  ${item.product_spec}` });
+    const right=`x${qty}   ¥${Math.round(lp).toLocaleString()}`;
+    const pad=Math.max(1,26-right.length);
+    lines.push({ text:`  ${' '.repeat(pad)}${right}` });
+    if (item.shortage) {
+      lines.push({ text:`  ⚠ ${lj?'缺货':'欠品'}${item.shortage_note?'：'+item.shortage_note:''}`, bold:true });
+    }
+  });
+  lines.push({ text:div, align:'center' });
+  lines.push({ text:`${lj?'小计':'小計'}: ¥${Math.round(sub).toLocaleString()}`, align:'right' });
+  lines.push({ text:`${lj?'税额':'消費税'}: ¥${Math.round(tax).toLocaleString()}`, align:'right' });
+  lines.push({ text:div, align:'center' });
+  lines.push({ text:lj?'合计（含税）':'合計（税込）', align:'right', bold:true });
+  lines.push({ text:`¥${Math.round(sub+tax).toLocaleString()}`, align:'right', bold:true, large:true });
+  lines.push({ text:div, align:'center' });
+  lines.push({ text:lj?'收货签名：':'受取サイン：' });
+  lines.push({ text:'' });
+  lines.push({ text:'' });
+  lines.push({ text:lj?'日期：':'日付：' });
+  lines.push({ text:'' });
+  lines.push({ text:'' });
+  return buildPrintContent(lines);
+}
+
+async function printDeliveryOrder(orderId) {
+  showLoading(currentLang==='zh'?'准备打印...':'印刷準備中...');
+  const { data:order } = await sb.from('orders')
+    .select('*, order_items(*)')
+    .eq('id', orderId).single();
+  hideLoading();
+  if (!order) { alert('データが見つかりません'); return; }
+  const content = buildDeliveryTicket(order);
+  await cloudPrint(content, `order_${order.order_no}`);
+}
+
+function openPrintSettings() {
+  const current = PRINT_CONFIG.workerUrl;
+  const url = prompt(
+    currentLang==='zh'
+      ? `Worker代理地址：\n当前: ${current||'未设置'}`
+      : `Worker URL：\n現在: ${current||'未設定'}`,
+    current
+  );
+  if (url !== null) {
+    PRINT_CONFIG.workerUrl = url.trim();
+    localStorage.setItem('hprt_worker_url', url.trim());
+    alert(currentLang==='zh'?'✅ 已保存！':'✅ 保存しました！');
+  }
+}
 </script>
 </body>
 </html>
