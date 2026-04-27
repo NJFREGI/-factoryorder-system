@@ -917,7 +917,11 @@ async function uploadProductImage(){const fileInput=document.getElementById('pIm
 document.querySelectorAll('.modal-overlay').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('active');});});
 
 // ═══════════════════════════════════════════════
-// 納品書 云打印模块 v2 - 改善对齐
+// 納品書 云打印模块
+// ═══════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════
+// 納品書 云打印模块 v3 - 2行シンプル形式
 // ═══════════════════════════════════════════════
 
 const PRINT_CONFIG = {
@@ -929,33 +933,6 @@ const PRINT_CONFIG = {
   senderTel:  '03-1234-5678',
 };
 
-// 文字幅計算（全角=2, 半角=1）
-function strWidth(s) {
-  let w = 0;
-  for (const c of String(s)) {
-    w += (c.match(/[\u3000-\u9fff\uf900-\ufaff\ufe30-\ufe4f\uff01-\uff60\uffe0-\uffe6]/) || c.charCodeAt(0) > 0x7f) ? 2 : 1;
-  }
-  return w;
-}
-
-// 右パディング（幅基準）
-function rPad(s, w) {
-  s = String(s);
-  const sw = strWidth(s);
-  return s + ' '.repeat(Math.max(0, w - sw));
-}
-
-// 左パディング（幅基準）
-function lPad(s, w) {
-  s = String(s);
-  const sw = strWidth(s);
-  return ' '.repeat(Math.max(0, w - sw)) + s;
-}
-
-// 区切り線 全角48文字幅
-function divLine(c='-') { return c.repeat(32); }
-
-// ESCコンテンツビルダー
 function buildPrintContent(lines) {
   let content = '<Sp W=0x00 H=0x00>';
   for (const line of lines) {
@@ -979,92 +956,63 @@ function buildPrintContent(lines) {
   return content;
 }
 
-// 納品書1ページ生成
 function buildNobinshoPage(order, shopInfo, items, pageNum, totalPages) {
   const date = new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'});
   const orderDate = order.order_date || '';
   const shopName = displayName(order.shop_name) || order.shop_id;
   const shopAddr = shopInfo?.address || '';
   const note = order.note || '';
+  const DIV  = '================================';
+  const DIV2 = '--------------------------------';
   const lines = [];
 
-  // ── ページ番号（右上）──
+  // ページ番号
   if (totalPages > 1) {
-    lines.push({ text: lPad(`${pageNum}/${totalPages}`, 32), bold:false });
+    lines.push({ text: `${pageNum} / ${totalPages}`, align:'right' });
   }
 
-  // ── タイトル ──
-  lines.push({ text: divLine('─'), align:'center' });
+  // タイトル
+  lines.push({ text: DIV, align:'center' });
   lines.push({ text: '納　品　書', align:'center', bold:true, large:true });
-  lines.push({ text: divLine('─'), align:'center' });
+  lines.push({ text: DIV, align:'center' });
 
-  // ── 発行情報 ──
+  // 発行情報
   lines.push({ text: `発行日　: ${date}` });
   lines.push({ text: `伝票番号: NO.${orderDate.replace(/-/g,'')}-${String(order.order_no).padStart(3,'0')}` });
   lines.push({ text: `納品日　: ${orderDate}` });
-  lines.push({ text: divLine('- '), align:'left' });
+  lines.push({ text: DIV2, align:'left' });
 
-  // ── 納品先 ──
+  // 納品先
   lines.push({ text: `お得意先: ${shopName}`, bold:true });
   if (shopAddr) lines.push({ text: `住　所　: ${shopAddr}` });
-  lines.push({ text: divLine('- '), align:'left' });
+  lines.push({ text: DIV2, align:'left' });
 
-  // ── 発行元 ──
+  // 発行元
   lines.push({ text: `発行元　: ${PRINT_CONFIG.senderName}` });
   lines.push({ text: `TEL　　 : ${PRINT_CONFIG.senderTel}` });
-  lines.push({ text: divLine('─'), align:'center' });
+  lines.push({ text: DIV, align:'center' });
 
-  // ── 商品テーブルヘッダー ──
-  // レイアウト: 商品名(16文字幅) 数量(4) 単価(8) 金額(8) = 36幅
-  const COL_NAME = 16; // 全角8文字
-  const COL_QTY  = 4;
-  const COL_PRI  = 8;
-  const COL_AMT  = 8;
-  lines.push({
-    text: rPad('商品名', COL_NAME) + lPad('数量', COL_QTY) + lPad('単価', COL_PRI) + lPad('金額', COL_AMT),
-    bold: true
-  });
-  lines.push({ text: divLine('-'), align:'left' });
-
-  // ── 商品行 ──
-  items.forEach(item => {
+  // 商品リスト（2行形式）
+  items.forEach((item, idx) => {
     const qty   = item.qty || 0;
     const price = item.unit_price || 0;
     const amt   = price * qty;
-    // 商品名 + 規格を結合（16幅に収める）
-    const nameSpec = `${item.product_name}${item.product_spec?' '+item.product_spec:''}`;
-    const nameW = strWidth(nameSpec);
+    const name  = item.product_name || '';
+    const spec  = item.product_spec || '';
 
-    if (nameW <= COL_NAME) {
-      // 1行に収まる場合
-      lines.push({
-        text: rPad(nameSpec, COL_NAME)
-            + lPad(String(qty), COL_QTY)
-            + lPad(`¥${Math.round(price).toLocaleString()}`, COL_PRI)
-            + lPad(`¥${Math.round(amt).toLocaleString()}`, COL_AMT)
-      });
-    } else {
-      // 商品名が長い場合は2行に分割
-      const name16 = nameSpec.slice(0, 8); // 全角8文字まで
-      lines.push({
-        text: rPad(name16, COL_NAME)
-            + lPad(String(qty), COL_QTY)
-            + lPad(`¥${Math.round(price).toLocaleString()}`, COL_PRI)
-            + lPad(`¥${Math.round(amt).toLocaleString()}`, COL_AMT)
-      });
-      // 残りの商品名を2行目に
-      const remain = nameSpec.slice(8);
-      if (remain) lines.push({ text: `  ${remain}` });
-    }
-    // 欠品マーク
+    // 1行目: 商品名 + 規格
+    lines.push({ text: `${idx+1}. ${name}  ${spec}`, bold:true });
+    // 2行目: 数量・単価・金額
+    lines.push({ text: `   数量:${qty}  単価:¥${Math.round(price).toLocaleString()}  金額:¥${Math.round(amt).toLocaleString()}` });
+
+    // 欠品
     if (item.shortage) {
-      lines.push({ text: `  ⚠ 欠品${item.shortage_note?'：'+item.shortage_note:''}`, bold:true });
+      lines.push({ text: `   ⚠ 欠品${item.shortage_note?'：'+item.shortage_note:''}`, bold:true });
     }
+    lines.push({ text: DIV2, align:'left' });
   });
 
-  lines.push({ text: divLine('-'), align:'left' });
-
-  // ── 最終ページのみ合計 ──
+  // 最終ページのみ合計
   if (pageNum === totalPages) {
     const allItems = order.order_items || [];
     let totalSub = 0, totalTax = 0;
@@ -1073,26 +1021,25 @@ function buildNobinshoPage(order, shopInfo, items, pageNum, totalPages) {
       totalSub += lp;
       totalTax += Math.round(lp*(i.tax_rate||0)/100);
     });
-    lines.push({ text: lPad(`小計　　　　 ¥${Math.round(totalSub).toLocaleString()}`, 32) });
-    lines.push({ text: '- '.repeat(16), align:'left' });
-    lines.push({ text: lPad(`消費税　　　 ¥${Math.round(totalTax).toLocaleString()}`, 32) });
-    lines.push({ text: divLine('─'), align:'center' });
-    lines.push({ text: lPad(`合　計  ¥${Math.round(totalSub+totalTax).toLocaleString()}`, 32), bold:true, large:true });
-    lines.push({ text: divLine('─'), align:'center' });
+    lines.push({ text: `小計　　: ¥${Math.round(totalSub).toLocaleString()}`, align:'right' });
+    lines.push({ text: `消費税　: ¥${Math.round(totalTax).toLocaleString()}`, align:'right' });
+    lines.push({ text: DIV, align:'center' });
+    lines.push({ text: `合　計  : ¥${Math.round(totalSub+totalTax).toLocaleString()}`, align:'right', bold:true, large:true });
+    lines.push({ text: DIV, align:'center' });
     if (note) {
       lines.push({ text: '【備考】', bold:true });
       lines.push({ text: note });
-      lines.push({ text: divLine('-'), align:'left' });
+      lines.push({ text: DIV2, align:'left' });
     }
   } else {
-    lines.push({ text: lPad('→次ページへ続く', 32) });
+    lines.push({ text: '→次ページへ続く', align:'right' });
   }
+
   lines.push({ text: '' });
   lines.push({ text: '' });
   return lines;
 }
 
-// 納品書打印（複数ページ対応）
 async function printNobinsho(orderId) {
   showLoading(currentLang==='zh'?'准备打印...':'印刷準備中...');
   const { data:order } = await sb.from('orders').select('*, order_items(*)').eq('id', orderId).single();
@@ -1136,7 +1083,10 @@ async function cloudPrint(content, orderNo='') {
 
 function openPrintSettings() {
   const current = PRINT_CONFIG.workerUrl;
-  const url = prompt(currentLang==='zh'?`Worker代理地址：\n当前: ${current||'未设置'}`:`Worker URL：\n現在: ${current||'未設定'}`, current);
+  const url = prompt(
+    currentLang==='zh'?`Worker代理地址：\n当前: ${current||'未设置'}`:`Worker URL：\n現在: ${current||'未設定'}`,
+    current
+  );
   if (url !== null) {
     PRINT_CONFIG.workerUrl = url.trim();
     localStorage.setItem('hprt_worker_url', url.trim());
