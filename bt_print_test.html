@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>汉印TP80NY 蓝牙打印测试</title>
+<style>
+:root{--P:#2563EB;--PD:#1d4ed8;--G:#059669;--R:#dc2626;--O:#d97706;--bg:#f8f9fa;--w:#fff;--t:#1a1a1a;--t2:#555;--t3:#999;--b:#dee2e6;--r:12px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans JP','Noto Sans SC','Hiragino Sans',sans-serif;background:var(--bg);color:var(--t);min-height:100vh;padding:16px}
+h1{font-size:18px;font-weight:800;color:var(--P);margin-bottom:2px}
+.sub{font-size:12px;color:var(--t3);margin-bottom:18px}
+.card{background:var(--w);border-radius:var(--r);border:1px solid var(--b);padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.card-title{font-size:14px;font-weight:700;margin-bottom:12px}
+.btn{width:100%;padding:13px;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;margin-bottom:8px}
+.btn:last-child{margin-bottom:0}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-p{background:var(--P);color:#fff}.btn-p:not(:disabled):active{background:var(--PD)}
+.btn-g{background:var(--G);color:#fff}
+.btn-o{background:var(--O);color:#fff}
+.btn-r{background:var(--R);color:#fff}
+.btn-out{background:var(--w);color:var(--t2);border:1.5px solid var(--b)}
+.status{display:flex;align-items:center;gap:8px;padding:10px 13px;border-radius:8px;font-size:13px;font-weight:500;margin-bottom:10px}
+.status.ok{background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7}
+.status.err{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5}
+.status.info{background:#eff6ff;color:#1e40af;border:1px solid #93c5fd}
+.status.warn{background:#fffbeb;color:#92400e;border:1px solid #fcd34d}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.dot-g{background:var(--G)}.dot-r{background:var(--R)}.dot-o{background:var(--O)}.dot-b{background:var(--P)}
+.log{background:#0f172a;color:#94a3b8;border-radius:8px;padding:12px;font-family:monospace;font-size:11px;min-height:100px;max-height:200px;overflow-y:auto;line-height:1.7}
+.log .ok{color:#4ade80}.log .err{color:#f87171}.log .info{color:#60a5fa}.log .warn{color:#fbbf24}
+.note{font-size:12px;color:var(--t3);line-height:1.6;padding:8px 10px;background:var(--bg);border-radius:6px;margin-top:4px}
+.row{display:flex;gap:8px}
+.row .btn{margin-bottom:0;flex:1}
+</style>
+</head>
+<body>
+
+<h1>🖨️ 汉印 TP80NY 蓝牙打印</h1>
+<p class="sub">Web Bluetooth · ESC/POS · 80mm · Android Chrome</p>
+
+<!-- 兼容性 -->
+<div class="card">
+  <div class="card-title">① 浏览器检测</div>
+  <div id="compatSt" class="status info"><div class="dot dot-b"></div><span>检测中...</span></div>
+  <div class="note">必须使用 Android 手机的 Chrome 浏览器。iOS 不支持。</div>
+</div>
+
+<!-- 连接 -->
+<div class="card">
+  <div class="card-title">② 连接打印机</div>
+  <div id="connSt" class="status warn"><div class="dot dot-o"></div><span>未连接</span></div>
+  <button class="btn btn-p" id="btnConn" onclick="connectPrinter()">📡 搜索并连接 TP80NY</button>
+  <button class="btn btn-r" id="btnDisc" onclick="disconnect()" style="display:none">断开连接</button>
+  <div class="note">点击后会弹出蓝牙列表，选择「TP80NY」或「HPRT」开头的设备。<br>⚠️ 先在手机蓝牙设置里配对好打印机。</div>
+</div>
+
+<!-- 测试打印 -->
+<div class="card">
+  <div class="card-title">③ 打印测试</div>
+  <button class="btn btn-g" id="btnTest" onclick="printTest()" disabled>🧾 打印测试小票</button>
+  <div class="row" style="margin-top:8px">
+    <button class="btn btn-out" id="btnFeed" onclick="feed()" disabled>↓ 走纸</button>
+    <button class="btn btn-out" id="btnCut" onclick="cut()" disabled>✂️ 切纸</button>
+  </div>
+</div>
+
+<!-- 打印订单（模拟） -->
+<div class="card">
+  <div class="card-title">④ 模拟打印订单</div>
+  <button class="btn btn-o" id="btnOrder" onclick="printSampleOrder()" disabled>📋 打印示例订单</button>
+  <div class="note">模拟工厂端送り状格式，测试实际打印效果。</div>
+</div>
+
+<!-- 日志 -->
+<div class="card">
+  <div class="card-title">日志 <span id="logCount" style="font-size:11px;color:var(--t3);font-weight:400"></span></div>
+  <div class="log" id="log">等待操作...</div>
+  <button class="btn btn-out" style="margin-top:8px;padding:8px;font-size:12px" onclick="clearLog()">清除</button>
+</div>
+
+<script>
+// ══ HPRT / ESC/POS 标准 UUID ══
+// Service: 0x18F0  Char Write: 0x2AF1
+const SVC_UUID  = '000018f0-0000-1000-8000-00805f9b34fb';
+const CHAR_UUID = '00002af1-0000-1000-8000-00805f9b34fb';
+// 备选（部分打印机）
+const SVC2  = '49535343-fe7d-4ae5-8fa9-9fafd205e455';
+const CHAR2 = '49535343-8841-43f4-a8d4-ecbe34729bb3';
+
+let device=null, charWrite=null;
+const CHARS_PER_LINE = 48; // 80mm
+
+// ── LOG ──
+let logLines=0;
+function log(msg,type=''){
+  const el=document.getElementById('log');
+  if(el.innerHTML==='等待操作...') el.innerHTML='';
+  const d=document.createElement('div');
+  d.className=type;
+  const t=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  d.textContent=`[${t}] ${msg}`;
+  el.appendChild(d);
+  el.scrollTop=el.scrollHeight;
+  logLines++;
+  document.getElementById('logCount').textContent=`(${logLines}条)`;
+}
+function clearLog(){document.getElementById('log').innerHTML='等待操作...';logLines=0;document.getElementById('logCount').textContent='';}
+
+// ── COMPAT ──
+window.addEventListener('load',()=>{
+  const el=document.getElementById('compatSt');
+  if(navigator.bluetooth){
+    el.className='status ok';
+    el.innerHTML='<div class="dot dot-g"></div><span>✅ 支持 Web Bluetooth，可以使用</span>';
+    log('Web Bluetooth 可用','ok');
+  } else {
+    el.className='status err';
+    el.innerHTML='<div class="dot dot-r"></div><span>❌ 不支持，请换用 Android Chrome</span>';
+    log('不支持 Web Bluetooth。请用 Android 的 Chrome 浏览器打开本页面','err');
+    document.getElementById('btnConn').disabled=true;
+  }
+});
+
+// ── CONNECT ──
+async function connectPrinter(){
+  log('正在搜索蓝牙设备...','info');
+  try {
+    device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: [SVC_UUID, SVC2]
+    });
+    log(`找到设备: ${device.name||'(无名称)'}','ok');
+    device.addEventListener('gattserverdisconnected', onDisconn);
+
+    log('连接 GATT...','info');
+    const server = await device.gatt.connect();
+    log('GATT 连接成功','ok');
+
+    charWrite = await getWriteChar(server);
+    if(!charWrite) throw new Error('找不到打印特征值，请检查打印机型号');
+
+    log(`✅ 打印机连接成功！特征值: ${charWrite.uuid.slice(0,8)}...`,'ok');
+    setConn(true);
+  } catch(e){
+    log(`连接失败: ${e.message}`,'err');
+    setConn(false);
+  }
+}
+
+async function getWriteChar(server){
+  // 1. 先试 HPRT 标准 UUID
+  for(const [svcId, charId] of [[SVC_UUID,CHAR_UUID],[SVC2,CHAR2]]){
+    try {
+      log(`尝试服务 ${svcId.slice(4,8)}...`,'info');
+      const svc = await server.getPrimaryService(svcId);
+      const c = await svc.getCharacteristic(charId);
+      if(c.properties.write||c.properties.writeWithoutResponse){
+        log(`找到标准写入特征值 ✓`,'ok'); return c;
+      }
+    } catch(e){ log(`服务 ${svcId.slice(4,8)} 不可用`) }
+  }
+  // 2. 扫描所有服务，找第一个可写特征值
+  log('扫描所有服务...','info');
+  try {
+    const services = await server.getPrimaryServices();
+    log(`共 ${services.length} 个服务`,'info');
+    for(const svc of services){
+      const chars = await svc.getCharacteristics();
+      for(const c of chars){
+        log(`  ${svc.uuid.slice(0,8)}... / ${c.uuid.slice(0,8)}... w=${c.properties.write} wr=${c.properties.writeWithoutResponse}`);
+        if(c.properties.write||c.properties.writeWithoutResponse){
+          log(`自动找到可写特征值 ✓`,'ok'); return c;
+        }
+      }
+    }
+  } catch(e){ log(`扫描失败: ${e.message}`,'err') }
+  return null;
+}
+
+function onDisconn(){
+  log('打印机断开连接','warn');
+  setConn(false); charWrite=null;
+}
+async function disconnect(){
+  device?.gatt?.disconnect();
+  log('已断开连接','info');
+}
+function setConn(ok){
+  const s=document.getElementById('connSt');
+  const btnC=document.getElementById('btnConn');
+  const btnD=document.getElementById('btnDisc');
+  const ids=['btnTest','btnFeed','btnCut','btnOrder'];
+  if(ok){
+    s.className='status ok';
+    s.innerHTML=`<div class="dot dot-g"></div><span>✅ 已连接: ${device?.name||'TP80NY'}</span>`;
+    btnC.style.display='none'; btnD.style.display='flex';
+    ids.forEach(id=>document.getElementById(id).disabled=false);
+  } else {
+    s.className='status warn';
+    s.innerHTML='<div class="dot dot-o"></div><span>未连接</span>';
+    btnC.style.display='flex'; btnD.style.display='none';
+    ids.forEach(id=>document.getElementById(id).disabled=true);
+  }
+}
+
+// ── ESC/POS ──
+const enc = new TextEncoder();
+function bytes(...b){ return new Uint8Array(b) }
+const CMD = {
+  init:   ()=>bytes(0x1B,0x40),
+  lf:     ()=>bytes(0x0A),
+  feed:   (n)=>bytes(0x1B,0x64,n),
+  cut:    ()=>bytes(0x1D,0x56,0x42,0x00),
+  center: ()=>bytes(0x1B,0x61,0x01),
+  left:   ()=>bytes(0x1B,0x61,0x00),
+  right:  ()=>bytes(0x1B,0x61,0x02),
+  bold1:  ()=>bytes(0x1B,0x45,0x01),
+  bold0:  ()=>bytes(0x1B,0x45,0x00),
+  dbl:    ()=>bytes(0x1D,0x21,0x11), // double size
+  normal: ()=>bytes(0x1D,0x21,0x00),
+  encode: (charset)=>bytes(0x1B,0x74,charset), // 0=PC437,1=Katakana
+};
+function txt(s){ return enc.encode(s) }
+function line(s=''){ return enc.encode(s+'\n') }
+function divider(){ return line('─'.repeat(CHARS_PER_LINE)) }  // works if printer supports UTF8
+function dasher(){ return line('-'.repeat(CHARS_PER_LINE)) }
+function pad2col(left,right,width){
+  const sp=Math.max(1,width-left.length-right.length);
+  return left+' '.repeat(sp)+right;
+}
+
+function concat(...arrs){
+  let len=0; arrs.forEach(a=>len+=a.length);
+  const out=new Uint8Array(len); let i=0;
+  arrs.forEach(a=>{out.set(a,i);i+=a.length});
+  return out;
+}
+
+async function send(data){
+  if(!charWrite){log('未连接','err');return false}
+  const CHUNK=100;
+  try {
+    for(let i=0;i<data.length;i+=CHUNK){
+      const chunk=data.slice(i,i+CHUNK);
+      if(charWrite.properties.writeWithoutResponse){
+        await charWrite.writeValueWithoutResponse(chunk);
+      } else {
+        await charWrite.writeValue(chunk);
+      }
+      await new Promise(r=>setTimeout(r,30));
+    }
+    return true;
+  } catch(e){
+    log(`发送错误: ${e.message}`,'err');
+    return false;
+  }
+}
+
+// ── PRINT FUNCTIONS ──
+async function feed(){
+  await send(concat(CMD.feed(4)));
+  log('走纸完成','ok');
+}
+async function cut(){
+  await send(concat(CMD.feed(2),CMD.cut()));
+  log('切纸完成','ok');
+}
+
+async function printTest(){
+  log('打印测试小票...','info');
+  const now=new Date().toLocaleString('zh-CN');
+  const data=concat(
+    CMD.init(),
+    CMD.center(), CMD.dbl(), CMD.bold1(),
+    line('受発注システム'),
+    CMD.normal(), CMD.bold0(),
+    dasher(),
+    line(now),
+    dasher(),
+    CMD.left(),
+    line(pad2col('干豆腐  500g/袋','x2',CHARS_PER_LINE)),
+    line(pad2col('  单价 Y300',    'Y600',CHARS_PER_LINE)),
+    line(pad2col('国産牛ロース 200g×5','x1',CHARS_PER_LINE)),
+    line(pad2col('  单价 Y2800',   'Y2800',CHARS_PER_LINE)),
+    dasher(),
+    CMD.right(), CMD.bold1(),
+    line('TOTAL: Y3,400 (incl.tax)'),
+    CMD.bold0(), CMD.center(),
+    line(''),
+    line('Print Test OK!'),
+    line('Web Bluetooth + ESC/POS'),
+    CMD.feed(3),
+    CMD.cut()
+  );
+  const ok=await send(data);
+  if(ok) log('✅ 测试小票打印完成！','ok');
+}
+
+async function printSampleOrder(){
+  log('打印示例订单...','info');
+  const date=new Date().toLocaleDateString('zh-CN');
+  const data=concat(
+    CMD.init(),
+    CMD.center(), CMD.dbl(), CMD.bold1(),
+    line('  送 り 状'),
+    CMD.normal(), CMD.bold0(),
+    dasher(),
+    CMD.left(),
+    line(pad2col('注文番号:','#12',CHARS_PER_LINE)),
+    line(pad2col('店舗名:','銀座店',CHARS_PER_LINE)),
+    line(pad2col('日付:',date,CHARS_PER_LINE)),
+    line(pad2col('ステータス:','出荷済',CHARS_PER_LINE)),
+    dasher(),
+    CMD.bold1(), line(pad2col('商品','数量    金額',CHARS_PER_LINE)), CMD.bold0(),
+    dasher(),
+    line('干豆腐 500g/袋'),
+    line(pad2col('  単価 Y300','x2   Y600',CHARS_PER_LINE)),
+    line('豚バラスライス 300g'),
+    line(pad2col('  単価 Y680','x3   Y2040',CHARS_PER_LINE)),
+    line('鶏もも肉 500g'),
+    line(pad2col('  単価 Y480','x1   Y480',CHARS_PER_LINE)),
+    dasher(),
+    line(pad2col('小計','Y3120',CHARS_PER_LINE)),
+    line(pad2col('消費税(8%)','Y249',CHARS_PER_LINE)),
+    CMD.bold1(), CMD.dbl(),
+    CMD.center(),
+    line('Y3,369'),
+    CMD.normal(), CMD.bold0(), CMD.left(),
+    dasher(),
+    line('受取サイン:'),
+    line(''),
+    line('日付:'),
+    CMD.feed(3),
+    CMD.cut()
+  );
+  const ok=await send(data);
+  if(ok) log('✅ 示例订单打印完成！','ok');
+}
+</script>
+</body>
+</html>
