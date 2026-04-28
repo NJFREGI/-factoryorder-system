@@ -3,73 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>受発注システム / 订货系统 - PRO UI v11</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-/* ===== v12 final fixes ===== */
-(function(){
-  const $ = (id)=>document.getElementById(id);
-  const previousOpenTap = window.openTap;
-  window.openTap = function(pid){
-    if(typeof previousOpenTap === 'function') previousOpenTap(pid);
-    const p = ((typeof allProducts !== 'undefined') ? allProducts : []).find(x=>String(x.id)===String(pid));
-    const priceEl = $('tapPrice');
-    const emojiEl = $('tapEmoji');
-    if(emojiEl){ emojiEl.style.display='none'; emojiEl.textContent=''; }
-    if(p && priceEl){ priceEl.textContent = fmt(Number(p.price || 0)) + '（税抜）'; }
-  };
-  let v12CatFixedStartY = 0;
-  let v12CatFixedReady = false;
-  window.ensureCategoryPlaceholder = function(){
-    const cat = $('catTabWrap');
-    if(!cat) return null;
-    let ph = $('catStickyPlaceholder');
-    if(!ph){ ph = document.createElement('div'); ph.id='catStickyPlaceholder'; cat.parentNode.insertBefore(ph, cat.nextSibling); }
-    return ph;
-  };
-  window.resetCategoryFixed = function(){
-    const cat=$('catTabWrap'); const ph=$('catStickyPlaceholder');
-    if(cat) cat.classList.remove('cat-fixed');
-    if(ph){ ph.style.display='none'; ph.style.height='0px'; }
-    v12CatFixedReady=false;
-  };
-  window.setupCategoryFixed = function(){
-    const cat=$('catTabWrap'); const page=$('page-order');
-    if(!cat || !page || !page.classList.contains('active')) return;
-    if(window.innerWidth>800){ window.resetCategoryFixed(); return; }
-    const ph=window.ensureCategoryPlaceholder();
-    cat.classList.remove('cat-fixed');
-    if(ph){ ph.style.display='none'; ph.style.height='0px'; }
-    const rect=cat.getBoundingClientRect();
-    v12CatFixedStartY=(window.scrollY||document.documentElement.scrollTop||0)+rect.top;
-    v12CatFixedReady=true;
-    window.updateCategoryFixed();
-  };
-  window.updateCategoryFixed = function(){
-    const cat=$('catTabWrap'); const page=$('page-order'); const ph=window.ensureCategoryPlaceholder?window.ensureCategoryPlaceholder():null;
-    if(!cat || !page || !ph) return;
-    if(window.innerWidth>800 || !page.classList.contains('active')){ window.resetCategoryFixed(); return; }
-    if(!v12CatFixedReady){ const rect=cat.getBoundingClientRect(); v12CatFixedStartY=(window.scrollY||document.documentElement.scrollTop||0)+rect.top; v12CatFixedReady=true; }
-    const y=window.scrollY||document.documentElement.scrollTop||0;
-    if(y>=v12CatFixedStartY){
-      if(!cat.classList.contains('cat-fixed')){ ph.style.height=cat.offsetHeight+'px'; ph.style.display='block'; cat.classList.add('cat-fixed'); }
-    }else{ cat.classList.remove('cat-fixed'); ph.style.display='none'; ph.style.height='0px'; }
-  };
-  window.filterProductsCat = function(v, btnEl){
-    catFilter=v;
-    document.querySelectorAll('.cat-tab-btn').forEach(b=>b.classList.remove('active'));
-    if(btnEl){ btnEl.classList.add('active'); try{btnEl.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});}catch(e){} }
-    const grid=$('productGrid');
-    if(grid){ grid.classList.remove('sliding'); void grid.offsetWidth; grid.classList.add('sliding'); setTimeout(()=>grid.classList.remove('sliding'),280); }
-    if(typeof window.renderProducts==='function') window.renderProducts();
-    requestAnimationFrame(()=>{ window.setupCategoryFixed(); window.updateCategoryFixed(); });
-  };
-  window.addEventListener('scroll',()=>requestAnimationFrame(()=>window.updateCategoryFixed&&window.updateCategoryFixed()),{passive:true});
-  window.addEventListener('resize',()=>setTimeout(()=>window.setupCategoryFixed&&window.setupCategoryFixed(),160));
-  window.addEventListener('orientationchange',()=>setTimeout(()=>window.setupCategoryFixed&&window.setupCategoryFixed(),450));
-  window.addEventListener('load',()=>setTimeout(()=>window.setupCategoryFixed&&window.setupCategoryFixed(),900));
-})();
-
-</script>
+<title>受発注システム / 订货系统 - PRO UI v13</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="受発注">
@@ -886,6 +821,10 @@ body{letter-spacing:.01em;background:#f7f8fa;}
 }
 #tapPrice{line-height:1.25 !important;white-space:normal !important;}
 
+
+/* ===== V14 商品详情价格：只显示税抜，避免两行挤压 ===== */
+#tapPrice{font-size:32px !important;line-height:1.2 !important;white-space:nowrap !important;}
+@media(max-width:480px){#tapPrice{font-size:30px !important;}}
 </style>
 </head>
 <body>
@@ -1380,7 +1319,7 @@ function filterProductsCat(v, btnEl){
   renderProducts();
 }
 function renderProducts(){const cart2=getCart();let list=allProducts.filter(p=>{const q=searchTerm.toLowerCase();const nameMatch=p.name.toLowerCase().includes(q)||(p.name_zh||'').includes(q)||p.spec.toLowerCase().includes(q);const catMatch=!catFilter||p.category===catFilter;return nameMatch&&catMatch;});const grid=document.getElementById('productGrid');if(!list.length){grid.innerHTML=`<div class='no-data' style='grid-column:1/-1'>${currentLang==='zh'?'找不到商品':'商品が見つかりません'}</div>`;return;}grid.innerHTML=list.map(p=>{const inCart=cart2.find(c=>c.product_id===p.id);const qty=inCart?inCart.qty:0;const oos=!p.active||p.stock<=0;const ptax=Math.round(p.price*(1+p.tax_rate/100));return `<div class="product-card ${qty>0?'in-cart':''} ${oos?'out-of-stock':''}" onclick="${oos?'':'openTap(\''+p.id+'\')'}"> ${qty>0?`<div class="badge-cart-qty">${qty}</div>`:''} ${oos?'<div class="badge-oos"><span class="ja">在庫なし</span><span class="sep"> / </span><span class="zh">缺货</span></div>':''} <div class="product-img">${p.image_url?`<img src="${p.image_url}" onerror="this.style.display='none';this.parentNode.textContent='${p.emoji||'📦'}'">`:p.emoji||'📦'}</div> <div class="product-info"><div class="product-name">${p.name}</div>${p.name_zh?`<div class="product-name-zh">${p.name_zh}</div>`:''}<div class="product-spec">${p.spec}</div><div class="product-price">${fmt(ptax)}<small>（税込）</small></div><div class="product-stock">在庫 ${p.stock} | 税${p.tax_rate}%</div></div></div>`;}).join('');}
-function openTap(pid){tapProduct=allProducts.find(p=>p.id===pid);const inCart=getCart().find(c=>c.product_id===pid);tapQtyVal=inCart?inCart.qty:1;document.getElementById('tapName').textContent=tapProduct.name;document.getElementById('tapEmoji').textContent=tapProduct.emoji||'📦';document.getElementById('tapNameZh').textContent=tapProduct.name_zh||'';document.getElementById('tapSpec').textContent=tapProduct.spec;document.getElementById('tapPrice').textContent=`${fmt(Math.round(tapProduct.price*(1+tapProduct.tax_rate/100)))}（税込） / ${fmt(tapProduct.price)}（税抜）`;document.getElementById('tapStock').textContent=`在庫: ${tapProduct.stock}`;document.getElementById('tapQtyVal').textContent=tapQtyVal;openModal('modalTap');}
+function openTap(pid){tapProduct=allProducts.find(p=>p.id===pid);const inCart=getCart().find(c=>c.product_id===pid);tapQtyVal=inCart?inCart.qty:1;document.getElementById('tapName').textContent=tapProduct.name;document.getElementById('tapEmoji').textContent=tapProduct.emoji||'📦';document.getElementById('tapNameZh').textContent=tapProduct.name_zh||'';document.getElementById('tapSpec').textContent=tapProduct.spec;document.getElementById('tapPrice').textContent=`${fmt(tapProduct.price)}（税抜）`;document.getElementById('tapStock').textContent=`在庫: ${tapProduct.stock}`;document.getElementById('tapQtyVal').textContent=tapQtyVal;openModal('modalTap');}
 function tapQtyChange(d){tapQtyVal=Math.max(1,Math.min(tapProduct.stock,tapQtyVal+d));document.getElementById('tapQtyVal').textContent=tapQtyVal;}
 function tapAddCart(){
   if(!tapProduct)return;
@@ -1571,7 +1510,149 @@ async function genDeliveryPDF(orderId){const{data:order}=await sb.from('orders')
   }
 }
 
-</style></head><body><button class="print-btn" onclick="window.print()">🖨️ 印刷 / PDF保存</button><h1>送 り 状</h1><div class="blue-line"></div><div class="meta"><div class="meta-row"><span class="k">注文番号</span><span class="v">#${order.order_no}</span></div><div class="meta-row"><span class="k">発行日時</span><span class="v">${new Date().toLocaleString('ja-JP')}</span></div><div class="meta-row"><span class="k">店舗</span><span class="v">${shopName}</span></div><div class="meta-row"><span class="k">注文日</span><span class="v">${order.order_date}</span></div><div class="meta-row"><span class="k">ステータス</span><span class="v">${si.ja}</span></div></div>${note?`<div style="padding:8px 12px;border-radius:4px;margin-bottom:16px;font-size:13px;background:#eff6ff;border-left:4px solid #2563EB;">📝 備考：${note}</div>`:''} ${factNote?`<div style="padding:8px 12px;border-radius:4px;margin-bottom:16px;font-size:13px;background:#fffbeb;border-left:4px solid #f59e0b;">🏭 工場メモ：${factNote}</div>`:''}<table><thead><tr><th>商品名</th><th>規格</th><th style="text-align:center;">数量</th><th style="text-align:right;">単価</th><th style="text-align:center;">税率</th><th style="text-align:right;">金額</th><th>欠品</th></tr></thead><tbody>${rows}</tbody></table><div class="totals"><table><tr><td style="color:#666;">小計（税抜）</td><td style="text-align:right;">¥${Math.round(order.subtotal||0).toLocaleString()}</td></tr><tr><td style="color:#666;">消費税</td><td style="text-align:right;">¥${Math.round(order.tax_total||0).toLocaleString()}</td></tr><tr><td class="grand">合計（税込）</td><td class="grand" style="text-align:right;">¥${Math.round(order.total||0).toLocaleString()}</td></tr></table></div><div class="sign-area"><div class="sign-box">受取確認サイン</div><div class="sign-box">受取日：　　　年　　月　　日</div></div><div class="footer">受発注システム — 送り状 #${order.order_no} — ${new Date().toLocaleString('ja-JP')}</div></body></html>`;const w=window.open('','_blank','width=920,height=720,scrollbars=yes');if(!w){alert('ポップアップをブロックされています。');return;}w.document.write(html);w.document.close();}
+</style></head><body><button class="print-btn" onclick="window.print()">🖨️ 印刷 / PDF保存</button><h1>送 り 状</h1><div class="blue-line"></div><div class="meta"><div class="meta-row"><span class="k">注文番号</span><span class="v">#${order.order_no}</span></div><div class="meta-row"><span class="k">発行日時</span><span class="v">${new Date().toLocaleString('ja-JP')}</span></div><div class="meta-row"><span class="k">店舗</span><span class="v">${shopName}</span></div><div class="meta-row"><span class="k">注文日</span><span class="v">${order.order_date}</span></div><div class="meta-row"><span class="k">ステータス</span><span class="v">${si.ja}</span></div></div>${note?`<div style="padding:8px 12px;border-radius:4px;margin-bottom:16px;font-size:13px;background:#eff6ff;border-left:4px solid #2563EB;">📝 備考：${note}</div>`:''} ${factNote?`<div style="padding:8px 12px;border-radius:4px;margin-bottom:16px;font-size:13px;background:#fffbeb;border-left:4px solid #f59e0b;">🏭 工場メモ：${factNote}</div>`:''}<table><thead><tr><th>商品名</th><th>規格</th><th style="text-align:center;">数量</th><th style="text-align:right;">単価</th><th style="text-align:center;">税率</th><th style="text-align:right;">金額</th><th>欠品</th></tr></thead><tbody>${rows}</tbody></table><div class="totals"><table><tr><td style="color:#666;">小計（税抜）</td><td style="text-align:right;">¥${Math.round(order.subtotal||0).toLocaleString()}</td></tr><tr><td style="color:#666;">消費税</td><td style="text-align:right;">¥${Math.round(order.tax_total||0).toLocaleString()}</td></tr><tr><td class="grand">合計（税込）</td><td class="grand" style="text-align:right;">¥${Math.round(order.total||0).toLocaleString()}</td></tr></table></div><div class="sign-area"><div class="sign-box">受取確認サイン</div><div class="sign-box">受取日：　　　年　　月　　日</div></div><div class="footer">受発注システム — 送り状 #${order.order_no} — ${new Date().toLocaleString('ja-JP')}</div>
+<!-- ===== v13 stable patch: cutoff sync + category centering ===== -->
+<style>
+@media (max-width:800px){
+  #page-order #catTabWrap.cat-fixed{
+    position:fixed !important;
+    top:var(--nav-h, 0px) !important;
+    left:0 !important;
+    right:0 !important;
+    width:100vw !important;
+    max-width:100vw !important;
+    z-index:4800 !important;
+    margin:0 !important;
+    padding:10px 12px 12px !important;
+    background:rgba(248,249,250,.98) !important;
+    border-bottom:1px solid rgba(0,0,0,.08) !important;
+    box-shadow:0 4px 18px rgba(0,0,0,.08) !important;
+    backdrop-filter:blur(8px) !important;
+    -webkit-backdrop-filter:blur(8px) !important;
+  }
+  #page-order #catTabInner{scroll-behavior:smooth;}
+}
+</style>
+<script>
+(function(){
+  const $ = (id)=>document.getElementById(id);
+  function setNavHeightVarV13(){
+    const nav=document.querySelector('.top-nav');
+    const h=nav && nav.offsetParent!==null ? nav.offsetHeight : 0;
+    document.documentElement.style.setProperty('--nav-h', h + 'px');
+    document.body.style.setProperty('--nav-h', h + 'px');
+    return h;
+  }
+  function centerCategoryButtonV13(btn){
+    if(!btn) return;
+    const wrap=$('catTabWrap');
+    const scroller = wrap || btn.parentElement;
+    if(!scroller) return;
+    requestAnimationFrame(()=>{
+      try{
+        const wrapRect=scroller.getBoundingClientRect();
+        const btnRect=btn.getBoundingClientRect();
+        const current=scroller.scrollLeft || 0;
+        const delta=(btnRect.left - wrapRect.left) - (wrapRect.width - btnRect.width)/2;
+        scroller.scrollTo({left: Math.max(0,current + delta), behavior:'smooth'});
+      }catch(e){try{btn.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});}catch(_e){}}
+    });
+  }
+  window.centerCategoryButtonV13=centerCategoryButtonV13;
+  function ensureCategoryPlaceholderV13(){
+    const cat=$('catTabWrap');
+    if(!cat) return null;
+    let ph=$('catStickyPlaceholder');
+    if(!ph){ph=document.createElement('div');ph.id='catStickyPlaceholder';cat.parentNode.insertBefore(ph,cat.nextSibling);}
+    return ph;
+  }
+  window.ensureCategoryPlaceholder=ensureCategoryPlaceholderV13;
+  window.resetCategoryFixed=function(){
+    const cat=$('catTabWrap'); const ph=$('catStickyPlaceholder');
+    if(cat) cat.classList.remove('cat-fixed');
+    if(ph){ph.style.display='none';ph.style.height='0px';}
+    window.catFixedReady=false;
+  };
+  window.setupCategoryFixed=function(){
+    const cat=$('catTabWrap'); const page=$('page-order');
+    if(!cat || !page || !page.classList.contains('active')) return;
+    const navH=setNavHeightVarV13();
+    if(window.innerWidth>800){window.resetCategoryFixed();return;}
+    const ph=ensureCategoryPlaceholderV13();
+    cat.classList.remove('cat-fixed');
+    if(ph){ph.style.display='none';ph.style.height='0px';}
+    const rect=cat.getBoundingClientRect();
+    window.catFixedStartY=(window.scrollY||document.documentElement.scrollTop||0)+rect.top-navH;
+    window.catFixedReady=true;
+    window.updateCategoryFixed();
+  };
+  window.updateCategoryFixed=function(){
+    const cat=$('catTabWrap'); const page=$('page-order'); const ph=ensureCategoryPlaceholderV13();
+    if(!cat || !page || !ph) return;
+    const navH=setNavHeightVarV13();
+    if(window.innerWidth>800 || !page.classList.contains('active')){window.resetCategoryFixed();return;}
+    if(!window.catFixedReady){window.setupCategoryFixed();return;}
+    const y=window.scrollY||document.documentElement.scrollTop||0;
+    if(y>=window.catFixedStartY){
+      if(!cat.classList.contains('cat-fixed')){ph.style.height=cat.offsetHeight+'px';ph.style.display='block';cat.classList.add('cat-fixed');}
+      cat.style.top=navH+'px';
+    }else{cat.classList.remove('cat-fixed');ph.style.display='none';ph.style.height='0px';}
+  };
+  window.filterProductsCat=function(v,btnEl){
+    catFilter=v;
+    document.querySelectorAll('.cat-tab-btn').forEach(b=>b.classList.remove('active'));
+    if(btnEl){btnEl.classList.add('active');centerCategoryButtonV13(btnEl);}
+    const grid=$('productGrid');
+    if(grid){grid.classList.remove('sliding');void grid.offsetWidth;grid.classList.add('sliding');setTimeout(()=>grid.classList.remove('sliding'),320);}
+    if(typeof window.renderProducts==='function') window.renderProducts();
+    requestAnimationFrame(()=>{window.setupCategoryFixed&&window.setupCategoryFixed();window.updateCategoryFixed&&window.updateCategoryFixed();if(btnEl) centerCategoryButtonV13(btnEl);});
+  };
+  const originalOnTabActivate = window.onTabActivate;
+  window.onTabActivate = async function(id){
+    if(id==='order'){
+      try{if(typeof loadCutoffSetting==='function') await loadCutoffSetting();}catch(e){}
+      if(typeof loadProducts==='function') await loadProducts();
+      if(typeof renderCutoffBanner==='function') renderCutoffBanner();
+      if(typeof checkReceiptRequired==='function') checkReceiptRequired();
+      cartDrawerOpen=false; const p=$('cartPanel'); if(p)p.classList.remove('cart-open');
+      setTimeout(()=>{window.setupCategoryFixed&&window.setupCategoryFixed();},200);
+      return;
+    }
+    if(typeof originalOnTabActivate === 'function') return originalOnTabActivate.apply(this,arguments);
+  };
+  const originalInitMainUI = window.initMainUI;
+  window.initMainUI = async function(){
+    try{if(typeof loadCutoffSetting==='function') await loadCutoffSetting();}catch(e){}
+    if(typeof originalInitMainUI === 'function') return originalInitMainUI.apply(this,arguments);
+  };
+  window.addEventListener('scroll',()=>requestAnimationFrame(()=>window.updateCategoryFixed&&window.updateCategoryFixed()),{passive:true});
+  window.addEventListener('resize',()=>setTimeout(()=>{setNavHeightVarV13();window.setupCategoryFixed&&window.setupCategoryFixed();},180));
+  window.addEventListener('orientationchange',()=>setTimeout(()=>{setNavHeightVarV13();window.setupCategoryFixed&&window.setupCategoryFixed();},450));
+  window.addEventListener('load',()=>setTimeout(()=>{setNavHeightVarV13();window.setupCategoryFixed&&window.setupCategoryFixed();},900));
+})();
+</script>
+
+
+<script>
+/* ===== V14 修正：商品详情弹窗只显示税抜价格 ===== */
+(function(){
+  function installOpenTapPriceFix(){
+    const originalOpenTap = window.openTap;
+    window.openTap = function(pid){
+      if (typeof originalOpenTap === 'function') originalOpenTap(pid);
+      try {
+        const list = window.allProducts || (typeof allProducts !== 'undefined' ? allProducts : []);
+        const p = list.find(x => String(x.id) === String(pid));
+        const priceEl = document.getElementById('tapPrice');
+        if (p && priceEl) priceEl.textContent = fmt(Number(p.price || 0)) + '（税抜）';
+      } catch(e) {}
+    };
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installOpenTapPriceFix);
+  else installOpenTapPriceFix();
+})();
+</script>
+</body></html>`;const w=window.open('','_blank','width=920,height=720,scrollbars=yes');if(!w){alert('ポップアップをブロックされています。');return;}w.document.write(html);w.document.close();}
 
 async function generateInvoicePDF(){const month=document.getElementById('invoiceMonth').value;const shopId=document.getElementById('invoiceShopSel').value;if(!month){alert(currentLang==='zh'?'请选择月份':'月を選択してください');return;}showLoading(currentLang==='zh'?'生成PDF...':'PDF生成中...');let query=sb.from('orders').select('*, order_items(*)').gte('order_date',month+'-01').lte('order_date',month+'-31').eq('receipt_confirmed',true);if(shopId)query=query.eq('shop_id',shopId);const{data:orders}=await query.order('order_date');hideLoading();if(!orders||!orders.length){alert(currentLang==='zh'?'没有已确认的订单':'確認済み注文がありません');return;}const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});const shops=[...new Set(orders.map(o=>o.shop_id))];let first=true;shops.forEach(sid=>{const shopOrders=orders.filter(o=>o.shop_id===sid);if(!shopOrders.length)return;if(!first)doc.addPage();first=false;const shopName=shopOrders[0].shop_name;const totalAmt=shopOrders.reduce((a,o)=>a+(o.total||0),0);const taxAmt=shopOrders.reduce((a,o)=>a+(o.tax_total||0),0);const shopDisplayInv=pdfShopNameWithId(shopName,shopOrders[0]?.shop_id);doc.setFontSize(20);doc.setFont('helvetica','bold');doc.text('INVOICE',105,18,{align:'center'});doc.setDrawColor(37,99,235);doc.setLineWidth(0.8);doc.line(20,22,190,22);doc.setFontSize(10);doc.setFont('helvetica','normal');doc.text(`To: ${shopDisplayInv}`,20,30);doc.text(`Period: ${month}`,20,37);doc.text(`Orders: ${shopOrders.length}`,20,44);doc.text(`Issued: ${new Date().toLocaleDateString('ja-JP')}`,130,30);doc.line(20,50,190,50);let y=58;doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('Date',20,y);doc.text('Order#',50,y);doc.text('Items',85,y);doc.text('Subtotal',115,y,{align:'right'});doc.text('Tax',140,y,{align:'right'});doc.text('Total',175,y,{align:'right'});doc.line(20,y+2,190,y+2);y+=9;doc.setFont('helvetica','normal');shopOrders.forEach(o=>{doc.text(o.order_date,20,y);doc.text('#'+o.order_no,50,y);doc.text(String(o.order_items?.length||''),85,y);doc.text('Y'+(o.subtotal||0).toLocaleString(),115,y,{align:'right'});doc.text('Y'+(o.tax_total||0).toLocaleString(),140,y,{align:'right'});doc.text('Y'+(o.total||0).toLocaleString(),175,y,{align:'right'});y+=8;});doc.line(20,y,190,y);y+=8;doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('GRAND TOTAL (incl. tax):',80,y);doc.text('Y'+Math.round(totalAmt).toLocaleString(),175,y,{align:'right'});});doc.save(`invoice_${month}${shopId?'_'+shopId:''}.pdf`);}
 
