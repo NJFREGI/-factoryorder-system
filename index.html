@@ -4,7 +4,113 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>受発注システム / 订货系统</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+
+// ===== v5 手机端分类栏真正固定 =====
+let catStickyStartY = 0;
+let catStickyReady = false;
+
+function ensureCatStickyPlaceholder() {
+  const cat = document.getElementById('catTabWrap');
+  if (!cat) return null;
+  let ph = document.getElementById('catStickyPlaceholder');
+  if (!ph) {
+    ph = document.createElement('div');
+    ph.id = 'catStickyPlaceholder';
+    cat.parentNode.insertBefore(ph, cat.nextSibling);
+  }
+  return ph;
+}
+
+function resetCatSticky() {
+  const cat = document.getElementById('catTabWrap');
+  const ph = document.getElementById('catStickyPlaceholder');
+  if (cat) cat.classList.remove('cat-fixed');
+  if (ph) {
+    ph.style.display = 'none';
+    ph.style.height = '0px';
+  }
+  catStickyReady = false;
+}
+
+function setupCatSticky() {
+  const cat = document.getElementById('catTabWrap');
+  const page = document.getElementById('page-order');
+  if (!cat || !page || !page.classList.contains('active')) return;
+
+  if (window.innerWidth > 800) {
+    resetCatSticky();
+    return;
+  }
+
+  const ph = ensureCatStickyPlaceholder();
+  cat.classList.remove('cat-fixed');
+  if (ph) {
+    ph.style.display = 'none';
+    ph.style.height = '0px';
+  }
+
+  const rect = cat.getBoundingClientRect();
+  catStickyStartY = window.scrollY + rect.top;
+  catStickyReady = true;
+  updateCatSticky();
+}
+
+function updateCatSticky() {
+  const cat = document.getElementById('catTabWrap');
+  const page = document.getElementById('page-order');
+  const ph = ensureCatStickyPlaceholder();
+  if (!cat || !page || !ph) return;
+
+  if (window.innerWidth > 800 || !page.classList.contains('active')) {
+    resetCatSticky();
+    return;
+  }
+
+  if (!catStickyReady) {
+    const rect = cat.getBoundingClientRect();
+    catStickyStartY = window.scrollY + rect.top;
+    catStickyReady = true;
+  }
+
+  const shouldFix = window.scrollY >= catStickyStartY;
+  if (shouldFix) {
+    if (!cat.classList.contains('cat-fixed')) {
+      ph.style.height = cat.offsetHeight + 'px';
+      ph.style.display = 'block';
+      cat.classList.add('cat-fixed');
+    }
+  } else {
+    cat.classList.remove('cat-fixed');
+    ph.style.display = 'none';
+    ph.style.height = '0px';
+  }
+}
+
+window.addEventListener('scroll', updateCatSticky, { passive: true });
+window.addEventListener('resize', () => setTimeout(setupCatSticky, 120));
+window.addEventListener('orientationchange', () => setTimeout(setupCatSticky, 350));
+window.addEventListener('load', () => setTimeout(setupCatSticky, 600));
+
+const _oldSwitchTabForCatSticky = typeof switchTab === 'function' ? switchTab : null;
+if (_oldSwitchTabForCatSticky) {
+  switchTab = function(id) {
+    const result = _oldSwitchTabForCatSticky.apply(this, arguments);
+    setTimeout(setupCatSticky, 300);
+    return result;
+  };
+}
+
+const _oldRenderProductsForCatSticky = typeof renderProducts === 'function' ? renderProducts : null;
+if (_oldRenderProductsForCatSticky) {
+  renderProducts = function() {
+    const result = _oldRenderProductsForCatSticky.apply(this, arguments);
+    setTimeout(setupCatSticky, 100);
+    return result;
+  };
+}
+
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="受発注">
@@ -580,6 +686,78 @@ html, body {
   .nav-tab{padding:13px 8px;font-size:13px;min-width:52px;}
   .lang-btn span{font-size:10px;padding:4px 6px;}
   .nav-btn{font-size:10px;padding:5px 7px;}
+}
+
+
+
+/* ===== v5 手机端分类栏真正固定：使用 JS 切换 fixed，避免 sticky 受 overflow 影响 ===== */
+@media (max-width: 800px) {
+  #catStickyPlaceholder {
+    display: none;
+    height: 0;
+  }
+
+  #page-order #catTabWrap {
+    position: relative !important;
+    top: auto !important;
+    z-index: 880;
+    background: var(--bg);
+  }
+
+  #page-order #catTabWrap.cat-fixed {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    z-index: 3000 !important;
+    margin: 0 !important;
+    padding: 10px 12px 12px !important;
+    background: rgba(248,249,250,.98) !important;
+    border-bottom: 1px solid rgba(0,0,0,.08) !important;
+    box-shadow: 0 4px 18px rgba(0,0,0,.08) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  #page-order #catTabWrap.cat-fixed + #catStickyPlaceholder {
+    display: block;
+  }
+
+  #page-order #catTabWrap.cat-fixed #catTabInner {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+}
+
+
+
+/* ===== 购物车打开时锁住背后商品页面 ===== */
+body.cart-lock {
+  overflow: hidden !important;
+  position: fixed;
+  width: 100%;
+  left: 0;
+  right: 0;
+}
+
+@media (max-width: 800px) {
+  .cart-panel.cart-open {
+    touch-action: none;
+  }
+
+  .cart-panel.cart-open .cart-body {
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cart-panel.cart-open #cartFooterContent {
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 </style>
@@ -1316,6 +1494,21 @@ async function exportSummaryPDF(){showLoading('PDF生成中...');await loadDaily
 
 // CART DRAWER
 let cartDrawerOpen=false;
+let bodyScrollY=0;
+
+function lockBodyScroll(){
+  if(window.innerWidth>800)return;
+  bodyScrollY=window.scrollY||document.documentElement.scrollTop||0;
+  document.body.classList.add('cart-lock');
+  document.body.style.top='-'+bodyScrollY+'px';
+}
+
+function unlockBodyScroll(){
+  if(window.innerWidth>800)return;
+  document.body.classList.remove('cart-lock');
+  document.body.style.top='';
+  window.scrollTo(0,bodyScrollY||0);
+}
 
 function getCartCount(){
   return getCart().reduce((sum,item)=>sum+Number(item.qty||0),0);
@@ -1348,6 +1541,7 @@ function closeCartDrawer(){
   if(arrow)arrow.textContent='▼';
   const hint=document.getElementById('cartExpandHint');
   if(hint)hint.style.opacity='1';
+  unlockBodyScroll();
   updateCartBadge();
 }
 
@@ -1360,6 +1554,7 @@ function openCartDrawer(){
   if(arrow)arrow.textContent='▲';
   const hint=document.getElementById('cartExpandHint');
   if(hint)hint.style.opacity='0';
+  lockBodyScroll();
   updateCartBadge();
 }
 
@@ -1376,11 +1571,25 @@ function _applyCartDrawer(){
     const panel=document.getElementById('cartPanel');
     if(panel)panel.classList.remove('cart-open');
     cartDrawerOpen=false;
+    document.body.classList.remove('cart-lock');
+    document.body.style.top='';
     updateCartBadge();
   }
 }
 
 window.addEventListener('resize',_applyCartDrawer);
+
+function initCartTouchGuard(){
+  const panel=document.getElementById('cartPanel');
+  if(!panel||panel.dataset.touchGuard==='1')return;
+  panel.dataset.touchGuard='1';
+  panel.addEventListener('touchmove',function(e){
+    if(window.innerWidth>800||!cartDrawerOpen)return;
+    const scrollable=e.target.closest('.cart-body,#cartFooterContent,textarea,input,select');
+    if(!scrollable){e.preventDefault();}
+  },{passive:false});
+}
+setTimeout(initCartTouchGuard,500);
 
 // IMAGE UPLOAD
 function previewImg(input){const file=input.files[0];if(!file)return;const reader=new FileReader();reader.onload=e=>{const prev=document.getElementById('pImgPreview');if(prev)prev.innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`;};reader.readAsDataURL(file);const urlField=document.getElementById('pImage');if(urlField)urlField.value='';const status=document.getElementById('pUploadStatus');if(status)status.innerHTML=`<span style="color:#d97706">📁 ${file.name}</span>`;}
