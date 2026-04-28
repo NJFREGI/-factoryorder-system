@@ -347,6 +347,148 @@ tr:hover td{background:var(--bg);}
   .stats-grid{grid-template-columns:1fr 1fr;gap:10px;}
   .stat-value{font-size:20px;}
 }
+
+
+/* ===== 2026-04 mobile fix: prevent horizontal overflow + manual cart drawer ===== */
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+#mainApp, .page, .container {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+.nav-inner, .nav-tabs, .order-layout, .order-layout > div,
+.product-grid, .search-bar, .cutoff-banner {
+  min-width: 0;
+  max-width: 100%;
+}
+.search-input { min-width: 0; }
+.cutoff-banner { flex-wrap: wrap; }
+.cat-tab-wrap { max-width: calc(100vw - 24px); }
+
+@media (max-width: 800px) {
+  #page-order .container { padding-bottom: 96px; }
+
+  .cart-panel {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    left: auto;
+    top: auto;
+    width: 58px;
+    height: 58px;
+    max-height: none;
+    border-radius: 50%;
+    z-index: 1200;
+    overflow: visible;
+    transform: none !important;
+    transition: all 0.25s ease;
+    box-shadow: 0 6px 24px rgba(0,0,0,.28);
+    background: var(--red);
+    border: none;
+  }
+
+  .cart-panel:not(.cart-open) .cart-header,
+  .cart-panel:not(.cart-open) .cart-body,
+  .cart-panel:not(.cart-open) #cartFooterContent {
+    display: none !important;
+  }
+
+  .cart-panel:not(.cart-open) #cartTotalBar {
+    display: flex !important;
+    width: 58px;
+    height: 58px;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 50%;
+    background: var(--red);
+    color: white;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cart-panel:not(.cart-open) #cartTotalBar::before {
+    content: "🛒";
+    font-size: 26px;
+  }
+
+  .cart-panel:not(.cart-open) #cartTotalBar .cart-total-big,
+  .cart-panel:not(.cart-open) #cartTotalBar > span:first-child,
+  .cart-panel:not(.cart-open) #cartExpandHint {
+    display: none !important;
+  }
+
+  .cart-panel:not(.cart-open) #cartCount {
+    display: flex !important;
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px !important;
+    border-radius: 999px !important;
+    background: #ef4444 !important;
+    color: white !important;
+    font-size: 12px !important;
+    font-weight: 900;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+  }
+
+  .cart-panel.cart-open {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: auto;
+    max-height: 85vh;
+    border-radius: 18px 18px 0 0;
+    background: white;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cart-panel.cart-open .cart-header { display: flex !important; }
+  .cart-panel.cart-open .cart-body {
+    display: block !important;
+    max-height: 42vh;
+    overflow-y: auto;
+  }
+  .cart-panel.cart-open #cartFooterContent { display: block !important; }
+  .cart-panel.cart-open #cartTotalBar { display: none !important; }
+
+  .cart-panel.cart-open #cartCount {
+    position: static;
+    display: inline-flex !important;
+    background: rgba(255,255,255,.25) !important;
+    color: white !important;
+    border: none;
+    min-width: auto;
+    height: auto;
+    padding: 2px 10px !important;
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .cart-panel {
+    width: 54px;
+    height: 54px;
+    right: 14px;
+    bottom: 14px;
+  }
+  .cart-panel:not(.cart-open) #cartTotalBar {
+    width: 54px;
+    height: 54px;
+  }
+  .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 </style>
 </head>
 <body>
@@ -842,14 +984,29 @@ function filterProductsCat(v, btnEl){
 function renderProducts(){const cart2=getCart();let list=allProducts.filter(p=>{const q=searchTerm.toLowerCase();const nameMatch=p.name.toLowerCase().includes(q)||(p.name_zh||'').includes(q)||p.spec.toLowerCase().includes(q);const catMatch=!catFilter||p.category===catFilter;return nameMatch&&catMatch;});const grid=document.getElementById('productGrid');if(!list.length){grid.innerHTML=`<div class='no-data' style='grid-column:1/-1'>${currentLang==='zh'?'找不到商品':'商品が見つかりません'}</div>`;return;}grid.innerHTML=list.map(p=>{const inCart=cart2.find(c=>c.product_id===p.id);const qty=inCart?inCart.qty:0;const oos=!p.active||p.stock<=0;const ptax=Math.round(p.price*(1+p.tax_rate/100));return `<div class="product-card ${qty>0?'in-cart':''} ${oos?'out-of-stock':''}" onclick="${oos?'':'openTap(\''+p.id+'\')'}"> ${qty>0?`<div class="badge-cart-qty">${qty}</div>`:''} ${oos?'<div class="badge-oos"><span class="ja">在庫なし</span><span class="sep"> / </span><span class="zh">缺货</span></div>':''} <div class="product-img">${p.image_url?`<img src="${p.image_url}" onerror="this.style.display='none';this.parentNode.textContent='${p.emoji||'📦'}'">`:p.emoji||'📦'}</div> <div class="product-info"><div class="product-name">${p.name}</div>${p.name_zh?`<div class="product-name-zh">${p.name_zh}</div>`:''}<div class="product-spec">${p.spec}</div><div class="product-price">${fmt(ptax)}<small>（税込）</small></div><div class="product-stock">在庫 ${p.stock} | 税${p.tax_rate}%</div></div></div>`;}).join('');}
 function openTap(pid){tapProduct=allProducts.find(p=>p.id===pid);const inCart=getCart().find(c=>c.product_id===pid);tapQtyVal=inCart?inCart.qty:1;document.getElementById('tapName').textContent=tapProduct.name;document.getElementById('tapEmoji').textContent=tapProduct.emoji||'📦';document.getElementById('tapNameZh').textContent=tapProduct.name_zh||'';document.getElementById('tapSpec').textContent=tapProduct.spec;document.getElementById('tapPrice').textContent=`${fmt(Math.round(tapProduct.price*(1+tapProduct.tax_rate/100)))}（税込） / ${fmt(tapProduct.price)}（税抜）`;document.getElementById('tapStock').textContent=`在庫: ${tapProduct.stock}`;document.getElementById('tapQtyVal').textContent=tapQtyVal;openModal('modalTap');}
 function tapQtyChange(d){tapQtyVal=Math.max(1,Math.min(tapProduct.stock,tapQtyVal+d));document.getElementById('tapQtyVal').textContent=tapQtyVal;}
-function tapAddCart(){if(!tapProduct)return;let cart2=getCart();const idx=cart2.findIndex(c=>c.product_id===tapProduct.id);const item={product_id:tapProduct.id,qty:tapQtyVal,product_name:tapProduct.name,product_name_zh:tapProduct.name_zh||'',product_spec:tapProduct.spec,product_emoji:tapProduct.emoji||'📦',unit_price:tapProduct.price,tax_rate:tapProduct.tax_rate};if(idx>=0)cart2[idx].qty=tapQtyVal;else cart2.push(item);setCart(cart2);closeModal('modalTap');renderProducts();renderCart();
-  // 确保购物车保持折叠状态
+function tapAddCart(){
+  if(!tapProduct)return;
+  let cart2=getCart();
+  const idx=cart2.findIndex(c=>c.product_id===tapProduct.id);
+  const item={
+    product_id:tapProduct.id,
+    qty:tapQtyVal,
+    product_name:tapProduct.name,
+    product_name_zh:tapProduct.name_zh||'',
+    product_spec:tapProduct.spec,
+    product_emoji:tapProduct.emoji||'📦',
+    unit_price:tapProduct.price,
+    tax_rate:tapProduct.tax_rate
+  };
+  if(idx>=0)cart2[idx].qty=tapQtyVal;
+  else cart2.push(item);
+  setCart(cart2);
+  closeModal('modalTap');
+  renderProducts();
+  renderCart();
+  // 手机端加入商品后不自动展开购物车，只更新数量角标
   if(window.innerWidth<=800){
-    cartDrawerOpen=false;
-    const p=document.getElementById('cartPanel');
-    if(p)p.classList.remove('cart-open');
-    const arrow=document.getElementById('cartDrawerArrow');
-    if(arrow)arrow.textContent='▼';
+    closeCartDrawer();
   }
 }
 
@@ -857,7 +1014,33 @@ function tapAddCart(){if(!tapProduct)return;let cart2=getCart();const idx=cart2.
 let cart=[];
 function getCart(){return ls('cart_'+currentUser?.id)||[];}
 function setCart(c){ls('cart_'+currentUser?.id,c);cart=c;}
-function renderCart(){const c=getCart();const countEl=document.getElementById('cartCount');if(!c.length){document.getElementById('cartBody').innerHTML='<div class="cart-empty"><span class="ja">商品をタップして追加</span><br><span class="zh">点击商品加入购物车</span></div>';['cartSubtotal','cartTaxAmt','cartTotal'].forEach(id=>document.getElementById(id).textContent='¥0');countEl.textContent='';return;}let sub=0,tax=0;document.getElementById('cartBody').innerHTML=c.map(item=>{const lp=item.unit_price*item.qty;const lt=Math.round(lp*item.tax_rate/100);sub+=lp;tax+=lt;return `<div class="cart-item"><div class="cart-item-info"><div class="cart-item-name">${item.product_emoji} ${item.product_name}</div><div class="cart-item-sub">${item.product_spec}</div></div><div class="qty-wrap"><button class="qty-btn m" onclick="cartQty('${item.product_id}',-1)">−</button><span class="qty-num">${item.qty}</span><button class="qty-btn p" onclick="cartQty('${item.product_id}',1)">＋</button></div><div class="cart-line-price">${fmt(lp)}</div></div>`;}).join('');document.getElementById('cartSubtotal').textContent=fmt(sub);document.getElementById('cartTaxAmt').textContent=fmt(tax);document.getElementById('cartTotal').textContent=fmt(sub+tax);countEl.textContent=c.reduce((a,i)=>a+i.qty,0)+'点';}
+function renderCart(){
+  const c=getCart();
+  const countEl=document.getElementById('cartCount');
+  const cartBody=document.getElementById('cartBody');
+  if(!c.length){
+    if(cartBody)cartBody.innerHTML='<div class="cart-empty"><span class="ja">商品をタップして追加</span><br><span class="zh">点击商品加入购物车</span></div>';
+    ['cartSubtotal','cartTaxAmt','cartTotal'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='¥0';});
+    if(countEl){countEl.textContent='';countEl.style.display='none';}
+    updateCartBadge();
+    if(window.innerWidth<=800&&!cartDrawerOpen)closeCartDrawer();
+    return;
+  }
+  let sub=0,tax=0;
+  if(cartBody){
+    cartBody.innerHTML=c.map(item=>{
+      const lp=item.unit_price*item.qty;
+      const lt=Math.round(lp*item.tax_rate/100);
+      sub+=lp;tax+=lt;
+      return `<div class="cart-item"><div class="cart-item-info"><div class="cart-item-name">${item.product_emoji} ${item.product_name}</div><div class="cart-item-sub">${item.product_spec}</div></div><div class="qty-wrap"><button class="qty-btn m" onclick="cartQty('${item.product_id}',-1)">−</button><span class="qty-num">${item.qty}</span><button class="qty-btn p" onclick="cartQty('${item.product_id}',1)">＋</button></div><div class="cart-line-price">${fmt(lp)}</div></div>`;
+    }).join('');
+  }
+  const subEl=document.getElementById('cartSubtotal');if(subEl)subEl.textContent=fmt(sub);
+  const taxEl=document.getElementById('cartTaxAmt');if(taxEl)taxEl.textContent=fmt(tax);
+  const totalEl=document.getElementById('cartTotal');if(totalEl)totalEl.textContent=fmt(sub+tax);
+  updateCartBadge();
+  if(window.innerWidth<=800&&!cartDrawerOpen)closeCartDrawer();
+}
 function cartQty(pid,d){let c=getCart();const idx=c.findIndex(x=>x.product_id===pid);if(idx<0)return;c[idx].qty=Math.max(0,c[idx].qty+d);if(c[idx].qty===0)c.splice(idx,1);setCart(c);renderCart();renderProducts();}
 
 // SUBMIT ORDER
@@ -1011,10 +1194,60 @@ async function exportSummaryPDF(){showLoading('PDF生成中...');await loadDaily
 
 // CART DRAWER
 let cartDrawerOpen=false;
-function toggleCartDrawer(){const isMobile=window.innerWidth<=800;if(!isMobile)return;cartDrawerOpen=!cartDrawerOpen;const panel=document.getElementById('cartPanel');if(panel){if(cartDrawerOpen)panel.classList.add('cart-open');else panel.classList.remove('cart-open');}const arrow=document.getElementById('cartDrawerArrow');if(arrow)arrow.textContent=cartDrawerOpen?'▲':'▼';const hint=document.getElementById('cartExpandHint');if(hint)hint.style.opacity=cartDrawerOpen?'0':'1';const header=document.getElementById('cartHeaderEl');if(header)header.style.display=cartDrawerOpen?'flex':'none';}
-function openCartDrawer(){if(window.innerWidth>800)return;if(cartDrawerOpen)return;cartDrawerOpen=true;const panel=document.getElementById('cartPanel');if(panel)panel.classList.add('cart-open');const arrow=document.getElementById('cartDrawerArrow');if(arrow)arrow.textContent='▲';}
-function _applyCartDrawer(){}
-window.addEventListener('resize',()=>{if(window.innerWidth>800){const panel=document.getElementById('cartPanel');if(panel)panel.classList.remove('cart-open');cartDrawerOpen=false;}});
+
+function getCartCount(){
+  return getCart().reduce((sum,item)=>sum+Number(item.qty||0),0);
+}
+
+function updateCartBadge(){
+  const countEl=document.getElementById('cartCount');
+  if(!countEl)return;
+  const count=getCartCount();
+  countEl.textContent=count>0?String(count):'';
+  countEl.style.display=count>0?'inline-flex':'none';
+}
+
+function closeCartDrawer(){
+  cartDrawerOpen=false;
+  const panel=document.getElementById('cartPanel');
+  if(panel)panel.classList.remove('cart-open');
+  const arrow=document.getElementById('cartDrawerArrow');
+  if(arrow)arrow.textContent='▼';
+  const hint=document.getElementById('cartExpandHint');
+  if(hint)hint.style.opacity='1';
+  updateCartBadge();
+}
+
+function openCartDrawer(){
+  if(window.innerWidth>800)return;
+  cartDrawerOpen=true;
+  const panel=document.getElementById('cartPanel');
+  if(panel)panel.classList.add('cart-open');
+  const arrow=document.getElementById('cartDrawerArrow');
+  if(arrow)arrow.textContent='▲';
+  const hint=document.getElementById('cartExpandHint');
+  if(hint)hint.style.opacity='0';
+  updateCartBadge();
+}
+
+function toggleCartDrawer(){
+  if(window.innerWidth>800)return;
+  if(cartDrawerOpen)closeCartDrawer();
+  else openCartDrawer();
+}
+
+function _applyCartDrawer(){
+  if(window.innerWidth<=800){
+    closeCartDrawer();
+  }else{
+    const panel=document.getElementById('cartPanel');
+    if(panel)panel.classList.remove('cart-open');
+    cartDrawerOpen=false;
+    updateCartBadge();
+  }
+}
+
+window.addEventListener('resize',_applyCartDrawer);
 
 // IMAGE UPLOAD
 function previewImg(input){const file=input.files[0];if(!file)return;const reader=new FileReader();reader.onload=e=>{const prev=document.getElementById('pImgPreview');if(prev)prev.innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`;};reader.readAsDataURL(file);const urlField=document.getElementById('pImage');if(urlField)urlField.value='';const status=document.getElementById('pUploadStatus');if(status)status.innerHTML=`<span style="color:#d97706">📁 ${file.name}</span>`;}
