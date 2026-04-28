@@ -1283,36 +1283,84 @@ function tapAddCart(){
 
 // CART
 let cart=[];
-function getCart(){return ls('cart_'+currentUser?.id)||[];}
-function setCart(c){ls('cart_'+currentUser?.id,c);cart=c;}
-function renderCart(){
-  const c=getCart();
+
+function normalizeCart(raw){
+  if(!Array.isArray(raw)) return [];
+  return raw.map(item=>{
+    const qty=Number(item.qty||0);
+    if(!item||qty<=0||!item.product_id) return null;
+    const p=(allProducts||[]).find(x=>String(x.id)===String(item.product_id));
+    return {
+      product_id:item.product_id,
+      qty,
+      product_name:item.product_name || p?.name || '',
+      product_name_zh:item.product_name_zh || p?.name_zh || '',
+      product_spec:item.product_spec || p?.spec || '',
+      product_emoji:item.product_emoji || p?.emoji || '📦',
+      unit_price:Number(item.unit_price ?? p?.price ?? 0),
+      tax_rate:Number(item.tax_rate ?? p?.tax_rate ?? 0)
+    };
+  }).filter(Boolean);
+}
+
+function getCart(){
+  const key='cart_'+(currentUser?.id||'guest');
+  const c=normalizeCart(ls(key)||[]);
+  cart=c;
+  return c;
+}
+
+function setCart(c){
+  const key='cart_'+(currentUser?.id||'guest');
+  const clean=normalizeCart(c);
+  cart=clean;
+  ls(key,clean);
+}
+
+function renderCart(options={}){
+  const c=normalizeCart(getCart());
+  setCart(c);
+  const totalQty=c.reduce((sum,item)=>sum+Number(item.qty||0),0);
   const countEl=document.getElementById('cartCount');
   const cartBody=document.getElementById('cartBody');
-  if(!c.length){
+
+  if(!totalQty){
     if(cartBody)cartBody.innerHTML='<div class="cart-empty"><span class="ja">商品をタップして追加</span><br><span class="zh">点击商品加入购物车</span></div>';
     ['cartSubtotal','cartTaxAmt','cartTotal'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='¥0';});
     if(countEl){countEl.textContent='';countEl.style.display='none';}
-    updateCartBadge();
-    if(window.innerWidth<=800&&!cartDrawerOpen)closeCartDrawer();
+    updateCartBadge(c);
+    if(window.innerWidth<=800&&!cartDrawerOpen&&!options.keepOpen)closeCartDrawer();
     return;
   }
+
   let sub=0,tax=0;
   if(cartBody){
     cartBody.innerHTML=c.map(item=>{
-      const lp=item.unit_price*item.qty;
-      const lt=Math.round(lp*item.tax_rate/100);
+      const lp=Number(item.unit_price||0)*Number(item.qty||0);
+      const lt=Math.round(lp*Number(item.tax_rate||0)/100);
       sub+=lp;tax+=lt;
-      return `<div class="cart-item"><div class="cart-item-info"><div class="cart-item-name">${item.product_emoji} ${item.product_name}</div><div class="cart-item-sub">${item.product_spec}</div></div><div class="qty-wrap"><button class="qty-btn m" onclick="cartQty('${item.product_id}',-1)">−</button><span class="qty-num">${item.qty}</span><button class="qty-btn p" onclick="cartQty('${item.product_id}',1)">＋</button></div><div class="cart-line-price">${fmt(lp)}</div></div>`;
+      const safeName=item.product_name||item.product_name_zh||'商品';
+      const safeSpec=item.product_spec||'';
+      return `<div class="cart-item"><div class="cart-item-info"><div class="cart-item-name">${item.product_emoji||'📦'} ${safeName}</div><div class="cart-item-sub">${safeSpec}</div></div><div class="qty-wrap"><button class="qty-btn m" onclick="cartQty('${item.product_id}',-1)">−</button><span class="qty-num">${item.qty}</span><button class="qty-btn p" onclick="cartQty('${item.product_id}',1)">＋</button></div><div class="cart-line-price">${fmt(lp)}</div></div>`;
     }).join('');
   }
   const subEl=document.getElementById('cartSubtotal');if(subEl)subEl.textContent=fmt(sub);
   const taxEl=document.getElementById('cartTaxAmt');if(taxEl)taxEl.textContent=fmt(tax);
   const totalEl=document.getElementById('cartTotal');if(totalEl)totalEl.textContent=fmt(sub+tax);
-  updateCartBadge();
-  if(window.innerWidth<=800&&!cartDrawerOpen)closeCartDrawer();
+  updateCartBadge(c);
+  if(window.innerWidth<=800&&!cartDrawerOpen&&!options.keepOpen)closeCartDrawer();
 }
-function cartQty(pid,d){let c=getCart();const idx=c.findIndex(x=>x.product_id===pid);if(idx<0)return;c[idx].qty=Math.max(0,c[idx].qty+d);if(c[idx].qty===0)c.splice(idx,1);setCart(c);renderCart();renderProducts();}
+
+function cartQty(pid,d){
+  let c=getCart();
+  const idx=c.findIndex(x=>String(x.product_id)===String(pid));
+  if(idx<0)return;
+  c[idx].qty=Math.max(0,Number(c[idx].qty||0)+d);
+  if(c[idx].qty===0)c.splice(idx,1);
+  setCart(c);
+  renderCart({keepOpen:cartDrawerOpen});
+  renderProducts();
+}
 
 // SUBMIT ORDER
 async function checkReceiptRequired(){const{data}=await sb.from('orders').select('id,order_no,status').eq('shop_id',currentUser.id).eq('status','delivered').eq('receipt_confirmed',false).limit(1);const alertEl=document.getElementById('orderAlerts');if(data&&data.length){const o=data[0];alertEl.innerHTML=`<div class="alert alert-warning">⚠️ <strong>${currentLang==='zh'?'上次订单（#'+o.order_no+'）未确认收货。':'前回の注文（#'+o.order_no+'）の受取確認が完了していません。'}</strong><button class="btn btn-orange btn-sm" style="margin-left:auto;flex-shrink:0;" onclick="openReceiptConfirm('${o.id}')">${currentLang==='zh'?'📦 确认收货':'📦 受取確認'}</button></div>`;}else alertEl.innerHTML='';}
@@ -1510,22 +1558,22 @@ function unlockBodyScroll(){
   window.scrollTo(0,bodyScrollY||0);
 }
 
-function getCartCount(){
-  return getCart().reduce((sum,item)=>sum+Number(item.qty||0),0);
+function getCartCount(c){
+  const list=Array.isArray(c)?normalizeCart(c):getCart();
+  return list.reduce((sum,item)=>sum+Number(item.qty||0),0);
 }
 
-function updateCartBadge(){
-  const count=getCartCount();
+function updateCartBadge(cartList){
+  const list=Array.isArray(cartList)?normalizeCart(cartList):getCart();
+  const count=getCartCount(list);
   const txt=count>0?String(count):'';
 
-  // 展开状态：标题栏里的数量
   const countEl=document.getElementById('cartCount');
   if(countEl){
     countEl.textContent=txt;
     countEl.style.display=count>0?'inline-flex':'none';
   }
 
-  // 折叠状态：右下角悬浮购物车按钮上的红色角标
   const floatBadge=document.getElementById('cartFloatBadge');
   if(floatBadge){
     floatBadge.textContent=txt;
@@ -1555,6 +1603,7 @@ function openCartDrawer(){
   const hint=document.getElementById('cartExpandHint');
   if(hint)hint.style.opacity='0';
   lockBodyScroll();
+  renderCart({keepOpen:true});
   updateCartBadge();
 }
 
