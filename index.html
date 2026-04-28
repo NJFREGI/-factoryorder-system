@@ -4,91 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>受発注システム / 订货系统</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-
-/* ===== v9: capture 阶段保护购物车备注，防止点击备注关闭购物车 ===== */
-document.addEventListener('pointerdown',function(e){
-  if(e.target && e.target.closest && e.target.closest('#orderNote')){
-    e.stopPropagation();
-    if(window.innerWidth<=800){
-      cartDrawerOpen=true;
-      const panel=document.getElementById('cartPanel');
-      if(panel)panel.classList.add('cart-open');
-    }
-  }
-},true);
-document.addEventListener('touchstart',function(e){
-  if(e.target && e.target.closest && e.target.closest('#orderNote')){
-    e.stopPropagation();
-    if(window.innerWidth<=800){
-      cartDrawerOpen=true;
-      const panel=document.getElementById('cartPanel');
-      if(panel)panel.classList.add('cart-open');
-    }
-  }
-},true);
-document.addEventListener('focusin',function(e){
-  if(e.target && e.target.closest && e.target.closest('#orderNote')){
-    if(window.innerWidth<=800){
-      cartDrawerOpen=true;
-      const panel=document.getElementById('cartPanel');
-      if(panel)panel.classList.add('cart-open');
-      setTimeout(()=>{
-        const panel2=document.getElementById('cartPanel');
-        if(panel2)panel2.classList.add('cart-open');
-        cartDrawerOpen=true;
-        updateCartBadge();
-      },350);
-    }
-  }
-},true);
-
-</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="受発注">
 <meta name="theme-color" content="#2563EB">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23E8392A'/><text y='.9em' font-size='75' x='10'>🏭</text></svg>">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-/* ===== v9: capture 阶段保护购物车备注，防止点击备注关闭购物车 ===== */
-document.addEventListener('pointerdown',function(e){
-  if(e.target && e.target.closest && e.target.closest('#orderNote')){
-    e.stopPropagation();
-    if(window.innerWidth<=800){
-      cartDrawerOpen=true;
-      const panel=document.getElementById('cartPanel');
-      if(panel)panel.classList.add('cart-open');
-    }
-  }
-},true);
-document.addEventListener('touchstart',function(e){
-  if(e.target && e.target.closest && e.target.closest('#orderNote')){
-    e.stopPropagation();
-    if(window.innerWidth<=800){
-      cartDrawerOpen=true;
-      const panel=document.getElementById('cartPanel');
-      if(panel)panel.classList.add('cart-open');
-    }
-  }
-},true);
-document.addEventListener('focusin',function(e){
-  if(e.target && e.target.closest && e.target.closest('#orderNote')){
-    if(window.innerWidth<=800){
-      cartDrawerOpen=true;
-      const panel=document.getElementById('cartPanel');
-      if(panel)panel.classList.add('cart-open');
-      setTimeout(()=>{
-        const panel2=document.getElementById('cartPanel');
-        if(panel2)panel2.classList.add('cart-open');
-        cartDrawerOpen=true;
-        updateCartBadge();
-      },350);
-    }
-  }
-},true);
-
-</script>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="受発注">
+<link id="dynamicManifest" rel="manifest">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=Noto+Sans+SC:wght@300;400;500;700;900&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap');
 :root {
@@ -757,6 +683,133 @@ body.cart-lock {
     -webkit-overflow-scrolling:touch;
   }
 }
+
+
+/* ===== v10 PRO UI：日式极简商业版 / 手机体验强化 ===== */
+:root{
+  --red:#1f5fbd;
+  --red-dark:#174a96;
+  --red-light:#eef5ff;
+  --bg:#f6f7f9;
+  --bg2:#eef1f5;
+  --text:#1f2933;
+  --text2:#657282;
+  --text3:#9aa5b1;
+  --border:#dfe5ec;
+  --shadow:0 3px 14px rgba(15,23,42,.06);
+  --shadow-lg:0 16px 42px rgba(15,23,42,.18);
+}
+body{letter-spacing:.01em;background:#f7f8fa;}
+.top-nav{background:#fff !important;color:var(--text);box-shadow:0 1px 0 rgba(15,23,42,.08),0 8px 22px rgba(15,23,42,.04);}
+.nav-inner{padding:0 10px !important;}
+.nav-logo{display:none !important;}
+.nav-tab{color:var(--text2) !important;border-bottom:3px solid transparent;padding:15px 18px !important;font-weight:700;}
+.nav-tab.active{color:var(--red) !important;background:transparent !important;border-bottom-color:var(--red) !important;}
+.nav-tab:hover{background:var(--red-light) !important;color:var(--red) !important;}
+.nav-btn{color:var(--text2) !important;border-color:var(--border) !important;background:#fff !important;}
+.lang-btn{background:var(--bg2) !important;border-color:var(--border) !important;}
+.lang-btn span{color:var(--text2) !important;}
+.lang-btn span.active{background:var(--red) !important;color:#fff !important;}
+.cutoff-banner{background:#fff !important;color:var(--text) !important;border:1px solid var(--border);box-shadow:var(--shadow);}
+.cutoff-time-big{color:var(--red);}
+.card,.product-card,.order-item,.cart-panel{box-shadow:var(--shadow);}
+
+/* 商品卡片：去掉容易显得 AI 的小图片，改为日式清爽列表卡 */
+#page-order .product-grid{grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px;}
+#page-order .product-card{border:1px solid var(--border);border-radius:14px;background:#fff;overflow:visible;min-height:132px;padding:14px 12px 12px;}
+#page-order .product-card:hover:not(.out-of-stock){border-color:#9bbceb;transform:translateY(-2px);box-shadow:0 10px 24px rgba(15,23,42,.10);}
+#page-order .product-card.in-cart{border-color:#62b78f;background:linear-gradient(180deg,#fff,#f8fffb);}
+#page-order .product-img{display:none !important;}
+#page-order .product-info{padding:0 !important;}
+#page-order .product-name{font-size:14px;line-height:1.45;min-height:40px;margin-bottom:4px;color:var(--text);}
+#page-order .product-name-zh{font-size:11px;color:var(--text3);min-height:16px;}
+#page-order .product-spec{display:inline-flex;max-width:100%;padding:3px 8px;margin-top:6px;margin-bottom:8px;border-radius:999px;background:var(--bg2);font-size:11px;color:var(--text2);}
+#page-order .product-price{font-size:17px;color:var(--red);letter-spacing:0;}
+#page-order .product-stock{font-size:10px;color:var(--text3);margin-top:5px;}
+#page-order .badge-cart-qty{top:-8px;left:auto;right:-8px;width:26px;height:26px;background:#e5484d;border:2px solid #fff;box-shadow:0 4px 12px rgba(229,72,77,.28);}
+#page-order .badge-oos{top:8px;right:8px;background:#6b7280;}
+
+/* 分类栏：稳定固定在导航下方 */
+@media(max-width:800px){
+  body{--nav-h:50px;--cat-h:54px;}
+  #page-order #catTabWrap{position:relative !important;top:auto !important;z-index:800;background:var(--bg);}
+  #page-order #catTabWrap.cat-fixed{
+    position:fixed !important;
+    top:var(--nav-h) !important;
+    left:0 !important;right:0 !important;width:100vw !important;max-width:100vw !important;
+    z-index:1200 !important;margin:0 !important;padding:8px 12px 10px !important;
+    background:rgba(247,248,250,.96) !important;
+    border-bottom:1px solid rgba(15,23,42,.08) !important;
+    box-shadow:0 8px 20px rgba(15,23,42,.06) !important;
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  }
+  #catStickyPlaceholder{display:none;height:0;}
+  #page-order #catTabWrap.cat-fixed + #catStickyPlaceholder{display:block;}
+  .cat-tab-btn{background:#fff;border:1px solid var(--border);padding:8px 15px;font-size:13px;}
+  .cat-tab-btn.active{background:var(--red);border-color:var(--red);box-shadow:0 4px 14px rgba(31,95,189,.20);}
+  .container{padding-left:12px;padding-right:12px;}
+  #page-order .product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+}
+
+/* iOS 风格购物车抽屉 */
+@media(max-width:800px){
+  .cart-panel{box-shadow:0 10px 38px rgba(15,23,42,.24);}
+  .cart-panel:not(.cart-open){background:var(--red) !important;}
+  .cart-panel.cart-open{
+    max-height:88dvh !important;
+    border-radius:22px 22px 0 0 !important;
+    border:0 !important;
+    box-shadow:0 -18px 48px rgba(15,23,42,.24) !important;
+    touch-action:none;
+  }
+  .cart-panel.cart-open .cart-header{
+    background:#fff !important;color:var(--text) !important;
+    border-bottom:1px solid var(--border);padding-top:22px !important;position:relative;
+  }
+  .cart-panel.cart-open .cart-header::before{
+    content:'';position:absolute;top:8px;left:50%;transform:translateX(-50%);
+    width:42px;height:5px;border-radius:999px;background:#cbd5e1;
+  }
+  .cart-panel.cart-open #cartCount{background:var(--red) !important;color:#fff !important;}
+  .cart-panel.cart-open .cart-body{
+    max-height:42dvh !important;
+    overflow-y:auto !important;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    scroll-behavior:smooth;
+  }
+  .cart-panel.cart-open #cartFooterContent{
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    background:#fff;
+  }
+  .cart-item{padding:13px 14px;}
+  #orderNote{font-size:16px !important;border-radius:12px;background:#f8fafc;}
+}
+
+/* 飞入购物车动画 */
+.fly-cart-dot{
+  position:fixed;z-index:99999;width:34px;height:34px;border-radius:50%;
+  background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:17px;font-weight:900;box-shadow:0 10px 24px rgba(31,95,189,.35);
+  pointer-events:none;transition:transform .58s cubic-bezier(.2,.72,.18,1),opacity .58s ease;
+}
+
+/* 下单成功动画 */
+.pro-success-overlay{position:fixed;inset:0;background:rgba(15,23,42,.42);z-index:10000;display:none;align-items:center;justify-content:center;padding:22px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
+.pro-success-overlay.show{display:flex;}
+.pro-success-card{width:100%;max-width:360px;background:#fff;border-radius:24px;padding:28px 22px;text-align:center;box-shadow:0 24px 64px rgba(15,23,42,.28);animation:successUp .24s ease-out;}
+.pro-success-mark{width:72px;height:72px;margin:0 auto 14px;border-radius:50%;background:#ecfdf5;color:#059669;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:900;animation:successPop .42s cubic-bezier(.2,1.3,.3,1);}
+.pro-success-title{font-size:20px;font-weight:900;color:var(--text);margin-bottom:8px;}
+.pro-success-text{font-size:14px;color:var(--text2);line-height:1.7;white-space:pre-line;}
+.pro-success-btn{margin-top:18px;width:100%;height:46px;border:0;border-radius:14px;background:var(--red);color:#fff;font-weight:800;font-family:inherit;font-size:15px;}
+@keyframes successUp{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes successPop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+
+/* 加载层更像产品 */
+.loading-overlay{background:rgba(255,255,255,.78) !important;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);}
+.loading-spinner{border-width:3px !important;}
+
 </style>
 </head>
 <body>
@@ -2004,6 +2057,267 @@ document.addEventListener('focusin',function(e){
     }
   }
 },true);
+
+
+
+/* ===== v10 PRO UI：交互增强、PWA、锚点、成功动画 ===== */
+(function(){
+  const $=(id)=>document.getElementById(id);
+
+  function setNavHeightVar(){
+    const nav=document.querySelector('.top-nav');
+    const h=nav?Math.ceil(nav.getBoundingClientRect().height):50;
+    document.body.style.setProperty('--nav-h',h+'px');
+  }
+
+  window.setupProPWA=function(){
+    try{
+      const manifest={
+        name:'受発注システム',short_name:'受発注',start_url:'.',display:'standalone',
+        background_color:'#f7f8fa',theme_color:'#1f5fbd',
+        icons:[{src:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="108" fill="#1f5fbd"/><text x="256" y="315" font-size="190" text-anchor="middle" fill="white" font-family="Arial">注</text></svg>'),sizes:'512x512',type:'image/svg+xml'}]
+      };
+      const blob=new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'});
+      const link=$('dynamicManifest');
+      if(link)link.href=URL.createObjectURL(blob);
+      if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+        const sw='self.addEventListener("install",e=>self.skipWaiting());self.addEventListener("activate",e=>self.clients.claim());self.addEventListener("fetch",e=>{});';
+        const swUrl=URL.createObjectURL(new Blob([sw],{type:'text/javascript'}));
+        navigator.serviceWorker.register(swUrl).catch(()=>{});
+      }
+    }catch(e){}
+  };
+
+  window.ensureSuccessOverlay=function(){
+    let ov=$('proSuccessOverlay');
+    if(ov)return ov;
+    ov=document.createElement('div');
+    ov.id='proSuccessOverlay';
+    ov.className='pro-success-overlay';
+    ov.innerHTML='<div class="pro-success-card"><div class="pro-success-mark">✓</div><div class="pro-success-title" id="proSuccessTitle">注文完了</div><div class="pro-success-text" id="proSuccessText"></div><button class="pro-success-btn" onclick="hideOrderSuccess()">閉じる</button></div>';
+    document.body.appendChild(ov);
+    return ov;
+  };
+  window.showOrderSuccess=function(title,text){
+    const ov=ensureSuccessOverlay();
+    const t=$('proSuccessTitle'),b=$('proSuccessText');
+    if(t)t.textContent=title||'注文完了';
+    if(b)b.textContent=text||'';
+    ov.classList.add('show');
+    setTimeout(()=>{try{navigator.vibrate&&navigator.vibrate(20);}catch(e){}},30);
+  };
+  window.hideOrderSuccess=function(){const ov=$('proSuccessOverlay');if(ov)ov.classList.remove('show');};
+
+  window.flyToCart=function(fromEl){
+    try{
+      if(window.innerWidth>800)return;
+      const target=$('cartPanel');
+      if(!fromEl||!target)return;
+      const a=fromEl.getBoundingClientRect();
+      const b=target.getBoundingClientRect();
+      const dot=document.createElement('div');
+      dot.className='fly-cart-dot';
+      dot.textContent='＋';
+      const sx=a.left+a.width/2-17, sy=a.top+a.height/2-17;
+      const tx=b.left+b.width/2-17, ty=b.top+b.height/2-17;
+      dot.style.left=sx+'px';dot.style.top=sy+'px';
+      document.body.appendChild(dot);
+      dot.getBoundingClientRect();
+      dot.style.transform='translate('+(tx-sx)+'px,'+(ty-sy)+'px) scale(.42)';
+      dot.style.opacity='0';
+      setTimeout(()=>dot.remove(),650);
+    }catch(e){}
+  };
+
+  window.scrollProductsIntoView=function(){
+    if(window.innerWidth>800)return;
+    const grid=$('productGrid');
+    if(!grid)return;
+    setNavHeightVar();
+    const navH=parseInt(getComputedStyle(document.body).getPropertyValue('--nav-h'))||50;
+    const cat=$('catTabWrap');
+    const catH=cat?cat.offsetHeight:52;
+    const top=(window.scrollY||document.documentElement.scrollTop)+grid.getBoundingClientRect().top-navH-catH-10;
+    window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+  };
+
+  /* 覆盖分类固定：以导航栏高度为基准，避免继续被滑走 */
+  window.setupCategoryFixed=function(){
+    const cat=$('catTabWrap'),page=$('page-order');
+    if(!cat||!page||!page.classList.contains('active'))return;
+    setNavHeightVar();
+    if(window.innerWidth>800){window.resetCategoryFixed&&window.resetCategoryFixed();return;}
+    const ph=window.ensureCategoryPlaceholder?window.ensureCategoryPlaceholder():null;
+    cat.classList.remove('cat-fixed');
+    if(ph){ph.style.display='none';ph.style.height='0px';}
+    const rect=cat.getBoundingClientRect();
+    window.catFixedStartY=(window.scrollY||document.documentElement.scrollTop||0)+rect.top-(parseInt(getComputedStyle(document.body).getPropertyValue('--nav-h'))||50);
+    window.catFixedReady=true;
+    window.updateCategoryFixed();
+  };
+  window.updateCategoryFixed=function(){
+    const cat=$('catTabWrap'),page=$('page-order');
+    const ph=window.ensureCategoryPlaceholder?window.ensureCategoryPlaceholder():null;
+    if(!cat||!page||!ph)return;
+    setNavHeightVar();
+    if(window.innerWidth>800||!page.classList.contains('active')){window.resetCategoryFixed&&window.resetCategoryFixed();return;}
+    if(!window.catFixedReady){window.setupCategoryFixed();return;}
+    const y=window.scrollY||document.documentElement.scrollTop||0;
+    if(y>=window.catFixedStartY){
+      if(!cat.classList.contains('cat-fixed')){ph.style.height=cat.offsetHeight+'px';ph.style.display='block';cat.classList.add('cat-fixed');}
+    }else{cat.classList.remove('cat-fixed');ph.style.display='none';ph.style.height='0px';}
+  };
+
+  /* 覆盖分类点击：过滤后自动滚到商品区域 */
+  window.filterProductsCat=function(v,btnEl){
+    window.catFilter=v;
+    document.querySelectorAll('.cat-tab-btn').forEach(b=>b.classList.remove('active'));
+    if(btnEl){btnEl.classList.add('active');btnEl.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});}
+    const grid=$('productGrid');
+    if(grid){grid.classList.remove('sliding');void grid.offsetWidth;grid.classList.add('sliding');setTimeout(()=>grid.classList.remove('sliding'),320);}
+    if(typeof window.renderProducts==='function')window.renderProducts();
+    requestAnimationFrame(()=>{window.setupCategoryFixed();window.scrollProductsIntoView();});
+  };
+
+  /* 覆盖商品渲染：无 AI 图片版 */
+  const safe=(x)=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  window.renderProducts=function(){
+    const cart2=typeof getCart==='function'?getCart():[];
+    let list=(window.allProducts||[]).filter(p=>{
+      const q=(window.searchTerm||'').toLowerCase();
+      const nameMatch=String(p.name||'').toLowerCase().includes(q)||String(p.name_zh||'').includes(q)||String(p.spec||'').toLowerCase().includes(q);
+      const catMatch=!window.catFilter||p.category===window.catFilter;
+      return nameMatch&&catMatch;
+    });
+    const grid=$('productGrid');if(!grid)return;
+    if(!list.length){grid.innerHTML=`<div class='no-data' style='grid-column:1/-1'>${window.currentLang==='zh'?'找不到商品':'商品が見つかりません'}</div>`;return;}
+    grid.innerHTML=list.map(p=>{
+      const inCart=cart2.find(c=>String(c.product_id)===String(p.id));
+      const qty=inCart?Number(inCart.qty||0):0;
+      const oos=!p.active||Number(p.stock)<=0;
+      const ptax=Math.round(Number(p.price||0)*(1+Number(p.tax_rate||0)/100));
+      return `<div class="product-card ${qty>0?'in-cart':''} ${oos?'out-of-stock':''}" data-product-id="${safe(p.id)}" onclick="${oos?'':'openTap(\''+String(p.id).replace(/'/g,"\\'")+'\')'}">
+        ${qty>0?`<div class="badge-cart-qty">${qty}</div>`:''}
+        ${oos?'<div class="badge-oos"><span class="ja">在庫なし</span><span class="zh">缺货</span></div>':''}
+        <div class="product-info">
+          <div class="product-name">${safe(p.name)}</div>
+          ${p.name_zh?`<div class="product-name-zh">${safe(p.name_zh)}</div>`:''}
+          <div class="product-spec">${safe(p.spec||'規格なし')}</div>
+          <div class="product-price">${fmt(ptax)}<small>（税込）</small></div>
+          <div class="product-stock">在庫 ${safe(p.stock)} ｜ 税${safe(p.tax_rate)}%</div>
+        </div>
+      </div>`;
+    }).join('');
+    setTimeout(()=>{window.setupCategoryFixed&&window.setupCategoryFixed();},60);
+  };
+
+  /* 覆盖打开商品弹窗：不显示大 AI 图标 */
+  const oldOpenTap=window.openTap;
+  window.openTap=function(pid){
+    if(typeof oldOpenTap==='function')oldOpenTap(pid);
+    const emoji=$('tapEmoji');
+    if(emoji){emoji.style.display='none';emoji.textContent='';}
+  };
+
+  /* 覆盖加入购物车：飞入动画 + 保持当前位置 */
+  window.tapAddCart=function(){
+    if(!window.tapProduct)return;
+    const origin=document.querySelector('#modalTap .btn-red')||document.querySelector(`[data-product-id="${window.CSS&&window.CSS.escape?window.CSS.escape(String(window.tapProduct.id)):String(window.tapProduct.id)}"]`);
+    const keepY=window.scrollY||document.documentElement.scrollTop||0;
+    let cart2=typeof getCart==='function'?getCart():[];
+    const idx=cart2.findIndex(c=>String(c.product_id)===String(window.tapProduct.id));
+    const item={product_id:window.tapProduct.id,qty:window.tapQtyVal,product_name:window.tapProduct.name,product_name_zh:window.tapProduct.name_zh||'',product_spec:window.tapProduct.spec,product_emoji:'',unit_price:window.tapProduct.price,tax_rate:window.tapProduct.tax_rate};
+    if(idx>=0)cart2[idx].qty=window.tapQtyVal; else cart2.push(item);
+    if(typeof setCart==='function')setCart(cart2);
+    flyToCart(origin);
+    if(typeof closeModal==='function')closeModal('modalTap');
+    if(typeof renderProducts==='function')renderProducts();
+    if(typeof renderCart==='function')renderCart({keepOpen:window.cartDrawerOpen});
+    if(window.innerWidth<=800 && !window.cartDrawerOpen){
+      const p=$('cartPanel');if(p)p.classList.remove('cart-open');
+      const arrow=$('cartDrawerArrow');if(arrow)arrow.textContent='▼';
+      if(typeof updateCartBadge==='function')updateCartBadge();
+    }
+    requestAnimationFrame(()=>{window.scrollTo(0,keepY);window.updateCategoryFixed&&window.updateCategoryFixed();});
+  };
+
+  /* 覆盖下单：保留 loading，成功改为动画弹窗 */
+  window.submitOrder=async function(){
+    const c=typeof getCart==='function'?getCart():[];
+    if(!c.length){alert(window.currentLang==='zh'?'购物车为空':'カートが空です');return;}
+    const noteEl=$('orderNote');
+    try{
+      const {data:unconf}=await sb.from('orders').select('id').eq('shop_id',currentUser.id).eq('status','delivered').eq('receipt_confirmed',false).limit(1);
+      if(unconf&&unconf.length){alert(window.currentLang==='zh'?'请先确认上次收货':'前回の受取確認が完了していません');return;}
+      showLoading(window.currentLang==='zh'?'正在提交订单...':'注文を送信しています...');
+      const oDate=getOrderDate();
+      const note=noteEl?noteEl.value:'';
+      const {data:sameDay}=await sb.from('orders').select('id,order_no').eq('shop_id',currentUser.id).eq('order_date',oDate).eq('status','pending').limit(1);
+      let successTitle='',successText='';
+      if(sameDay&&sameDay.length){
+        const orderId=sameDay[0].id;
+        const items=c.map(item=>({order_id:orderId,...itemPayload(item)}));
+        await sb.from('order_items').insert(items);
+        if(note){
+          const {data:existing}=await sb.from('orders').select('note').eq('id',orderId).single();
+          const newNote=[existing?.note,note].filter(Boolean).join('\n');
+          await sb.from('orders').update({note:newNote,updated_at:new Date().toISOString()}).eq('id',orderId);
+        }
+        await recalcOrderDB(orderId);
+        successTitle=window.currentLang==='zh'?'已追加到今日订单':'注文を追加しました';
+        successText=window.currentLang==='zh'?`订单号 #${sameDay[0].order_no}\n已合并到今日订单`:`注文番号 #${sameDay[0].order_no}\n同日の注文にまとめられました`;
+      }else{
+        const {data:newOrder,error}=await sb.from('orders').insert({shop_id:currentUser.id,shop_name:currentUser.name,order_date:oDate,note}).select().single();
+        if(error)throw error;
+        const orderId=newOrder.id;
+        const items=c.map(item=>({order_id:orderId,...itemPayload(item)}));
+        await sb.from('order_items').insert(items);
+        for(const item of c){
+          const p=(window.allProducts||[]).find(x=>String(x.id)===String(item.product_id));
+          if(p){
+            const newStock=Math.max(0,Number(p.stock||0)-Number(item.qty||0));
+            const newActive=newStock>0?p.active:false;
+            await sb.from('products').update({stock:newStock,active:newActive}).eq('id',p.id);
+            p.stock=newStock;p.active=newActive;
+          }
+        }
+        await recalcOrderDB(orderId);
+        const {data:finalOrder}=await sb.from('orders').select('order_no,total').eq('id',orderId).single();
+        successTitle=window.currentLang==='zh'?'下单成功':'注文完了';
+        successText=window.currentLang==='zh'?`订单号 #${finalOrder.order_no}\n合计 ${fmt(finalOrder.total)}（含税）`:`注文番号 #${finalOrder.order_no}\n合計 ${fmt(finalOrder.total)}（税込）`;
+      }
+      hideLoading();
+      setCart([]);
+      if(noteEl)noteEl.value='';
+      if(typeof renderCart==='function')renderCart({keepOpen:false});
+      if(typeof renderProducts==='function')renderProducts();
+      if(typeof closeCartDrawer==='function')closeCartDrawer();
+      if(typeof checkReceiptRequired==='function')checkReceiptRequired();
+      showOrderSuccess(successTitle,successText);
+    }catch(e){
+      hideLoading();
+      alert('エラー: '+(e&&e.message?e.message:e));
+    }
+  };
+
+  /* 备注栏点击不关闭：再加强一次 */
+  function protectNote(){
+    const note=$('orderNote');if(!note||note.dataset.proV10)return;note.dataset.proV10='1';
+    ['click','touchstart','touchend','pointerdown','focusin','mousedown'].forEach(ev=>{
+      note.addEventListener(ev,function(e){e.stopPropagation();if(window.innerWidth<=800&&window.cartDrawerOpen){const p=$('cartPanel');if(p)p.classList.add('cart-open');}},ev==='touchstart'?{passive:true}:false);
+    });
+  }
+
+  window.addEventListener('scroll',()=>requestAnimationFrame(()=>window.updateCategoryFixed&&window.updateCategoryFixed()),{passive:true});
+  window.addEventListener('resize',()=>setTimeout(()=>{setNavHeightVar();window.setupCategoryFixed&&window.setupCategoryFixed();protectNote();},180));
+  window.addEventListener('orientationchange',()=>setTimeout(()=>{setNavHeightVar();window.setupCategoryFixed&&window.setupCategoryFixed();},450));
+  window.addEventListener('load',()=>setTimeout(()=>{setNavHeightVar();setupProPWA();ensureSuccessOverlay();protectNote();window.setupCategoryFixed&&window.setupCategoryFixed();},800));
+
+  const oldSwitch=window.switchTab;
+  if(typeof oldSwitch==='function'){
+    window.switchTab=function(id){const r=oldSwitch.apply(this,arguments);setTimeout(()=>{setNavHeightVar();protectNote();window.setupCategoryFixed&&window.setupCategoryFixed();},250);return r;};
+  }
+})();
 
 </script>
 </body>
