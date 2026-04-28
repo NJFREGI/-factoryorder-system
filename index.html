@@ -489,6 +489,38 @@ html, body {
   .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+
+/* ===== 修正版：折叠状态的购物车数量角标 ===== */
+@media (max-width: 800px) {
+  #cartFloatBadge {
+    display: none;
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    min-width: 23px;
+    height: 23px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    border: 2px solid #fff;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 19px;
+    text-align: center;
+    z-index: 3;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  }
+  .cart-panel.cart-open #cartFloatBadge {
+    display: none !important;
+  }
+}
+@media (min-width: 801px) {
+  #cartFloatBadge {
+    display: none !important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -595,6 +627,7 @@ html, body {
         </div>
         <div>
           <div class="cart-panel" id="cartPanel">
+            <span id="cartFloatBadge" aria-label="cart count"></span>
             <div class="cart-header" id="cartHeaderEl" onclick="toggleCartDrawer()" style="cursor:pointer;">
               🛒 <span class="ja">カート</span><span class="zh">购物车</span>
               <span id="cartCount" style="background:rgba(255,255,255,.25);border-radius:20px;padding:2px 10px;font-size:12px;margin-left:auto;"></span>
@@ -1200,11 +1233,22 @@ function getCartCount(){
 }
 
 function updateCartBadge(){
-  const countEl=document.getElementById('cartCount');
-  if(!countEl)return;
   const count=getCartCount();
-  countEl.textContent=count>0?String(count):'';
-  countEl.style.display=count>0?'inline-flex':'none';
+  const txt=count>0?String(count):'';
+
+  // 展开状态：标题栏里的数量
+  const countEl=document.getElementById('cartCount');
+  if(countEl){
+    countEl.textContent=txt;
+    countEl.style.display=count>0?'inline-flex':'none';
+  }
+
+  // 折叠状态：右下角悬浮购物车按钮上的红色角标
+  const floatBadge=document.getElementById('cartFloatBadge');
+  if(floatBadge){
+    floatBadge.textContent=txt;
+    floatBadge.style.display=(window.innerWidth<=800 && !cartDrawerOpen && count>0)?'block':'none';
+  }
 }
 
 function closeCartDrawer(){
