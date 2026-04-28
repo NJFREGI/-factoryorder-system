@@ -216,22 +216,26 @@ tr:hover td{background:var(--bg);}
 .cat-tab-wrap{
   overflow-x:auto;
   scrollbar-width:none;
-  margin-bottom:16px;
+  margin-bottom:14px;
   -webkit-overflow-scrolling:touch;
+  /* 负margin让标签延伸到屏幕边缘 */
+  margin-left:-12px;
+  margin-right:-12px;
+  padding-left:12px;
+  padding-right:12px;
 }
 .cat-tab-wrap::-webkit-scrollbar{display:none;}
 .cat-tab-inner{
   display:flex;
   gap:8px;
-  padding:4px 2px;
+  padding:4px 0;
   white-space:nowrap;
   width:max-content;
-  min-width:100%;
 }
 .cat-tab-btn{
   display:inline-flex;
   align-items:center;
-  padding:8px 18px;
+  padding:7px 16px;
   border-radius:24px;
   border:2px solid var(--border);
   background:white;
@@ -242,6 +246,7 @@ tr:hover td{background:var(--bg);}
   transition:all .2s;
   flex-shrink:0;
   font-family:inherit;
+  white-space:nowrap;
 }
 .cat-tab-btn:hover{border-color:var(--red);color:var(--red);}
 .cat-tab-btn.active{
@@ -274,12 +279,12 @@ tr:hover td{background:var(--bg);}
   .section-header{margin-bottom:14px;}
   #page-order .container{padding-bottom:80px;}
   .product-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;}
-  .cart-panel{position:fixed;bottom:0;left:0;right:0;border-radius:18px 18px 0 0;z-index:400;box-shadow:0 -4px 24px rgba(0,0,0,.2);transition:transform 0.28s cubic-bezier(0.4,0,0.2,1);transform:translateY(calc(100% - 52px));background:white;max-height:90vh;overflow:hidden;}
+  .cart-panel{position:fixed;bottom:0;left:0;right:0;border-radius:18px 18px 0 0;z-index:400;box-shadow:0 -4px 24px rgba(0,0,0,.2);transition:transform 0.28s cubic-bezier(0.4,0,0.2,1);transform:translateY(calc(100% - 56px));background:white;max-height:90vh;overflow:hidden;}
   .cart-panel.cart-open{transform:translateY(0);overflow-y:auto;}
-  .cart-body{max-height:40vh;overflow-y:auto;}
-  #cartTotalBar{display:flex !important;padding:10px 16px;border-top:1px solid var(--border);cursor:pointer;}
+  .cart-body{max-height:45vh;overflow-y:auto;}
+  #cartTotalBar{display:flex !important;padding:12px 16px;border-top:1px solid var(--border);cursor:pointer;background:white;}
   #cartExpandHint{font-size:11px;color:var(--text3);}
-  .cart-header{cursor:pointer;}
+  .cart-header{cursor:pointer;display:none !important;}
 }
 @media(max-width:480px){
   .nav-logo{font-size:13px;margin-right:8px;}
@@ -774,7 +779,7 @@ function doLogout(){currentUser=null;cart=[];ls('session',null);document.getElem
 
 // NAV
 const roleTabs={order:[{id:'order',label:'<span class="ja">🛒 注文</span><span class="sep"> / </span><span class="zh">🛒 订货</span>'},{id:'order-history',label:'<span class="ja">📋 履歴</span><span class="sep"> / </span><span class="zh">📋 记录</span>'}],factory:[{id:'factory-orders',label:'<span class="ja">📦 受注</span><span class="sep"> / </span><span class="zh">📦 订单</span>'},{id:'factory-products',label:'<span class="ja">🏷️ 商品</span><span class="sep"> / </span><span class="zh">🏷️ 商品</span>'},{id:'factory-settings',label:'<span class="ja">⚙️ 設定</span><span class="sep"> / </span><span class="zh">⚙️ 设置</span>'}],delivery:[{id:'delivery',label:'<span class="ja">🚚 配送</span><span class="sep"> / </span><span class="zh">🚚 配送</span>'}]};
-function initMainUI(){applyLang();cartDrawerOpen=false;setTimeout(()=>{const p=document.getElementById('cartPanel');if(p)p.classList.remove('cart-open');const arrow=document.getElementById('cartDrawerArrow');if(arrow)arrow.textContent='▼';},100);const tabs=roleTabs[currentUser.role];document.getElementById('navTabs').innerHTML=tabs.map(t=>`<div class="nav-tab" onclick="switchTab('${t.id}')">${t.label}</div>`).join('');document.getElementById('navUser').innerHTML=`<span class="ja">ログイン中:</span><span class="sep"> / </span><span class="zh">登录中:</span> <strong>${currentUser.name}</strong>`;switchTab(tabs[0].id);}
+function initMainUI(){applyLang();cartDrawerOpen=false;setTimeout(()=>{if(window.innerWidth<=800){const p=document.getElementById('cartPanel');if(p){p.classList.remove('cart-open');p.style.transform='';}const arrow=document.getElementById('cartDrawerArrow');if(arrow)arrow.textContent='▼';const hint=document.getElementById('cartExpandHint');if(hint)hint.style.opacity='1';}},200);const tabs=roleTabs[currentUser.role];document.getElementById('navTabs').innerHTML=tabs.map(t=>`<div class="nav-tab" onclick="switchTab('${t.id}')">${t.label}</div>`).join('');document.getElementById('navUser').innerHTML=`<span class="ja">ログイン中:</span><span class="sep"> / </span><span class="zh">登录中:</span> <strong>${currentUser.name}</strong>`;switchTab(tabs[0].id);}
 function switchTab(id){const tabs=roleTabs[currentUser.role];document.querySelectorAll('.nav-tab').forEach((el,i)=>{el.classList.toggle('active',tabs[i].id===id);});document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pageEl=document.getElementById('page-'+id);if(pageEl)pageEl.classList.add('active');onTabActivate(id);}
 function onTabActivate(id){if(id==='order'){loadProducts();renderCutoffBanner();checkReceiptRequired();cartDrawerOpen=false;const p=document.getElementById('cartPanel');if(p)p.classList.remove('cart-open');}if(id==='order-history')renderOrderHistory();if(id==='factory-orders')renderFactoryOrders();if(id==='factory-products')renderProductTable();if(id==='factory-settings')loadSettingsPage();if(id==='delivery')renderDelivery();}
 
@@ -992,7 +997,7 @@ async function exportSummaryPDF(){showLoading('PDF生成中...');await loadDaily
 
 // CART DRAWER
 let cartDrawerOpen=false;
-function toggleCartDrawer(){const isMobile=window.innerWidth<=800;if(!isMobile)return;cartDrawerOpen=!cartDrawerOpen;const panel=document.getElementById('cartPanel');if(panel){if(cartDrawerOpen)panel.classList.add('cart-open');else panel.classList.remove('cart-open');}const arrow=document.getElementById('cartDrawerArrow');if(arrow)arrow.textContent=cartDrawerOpen?'▲':'▼';const hint=document.getElementById('cartExpandHint');if(hint)hint.style.opacity=cartDrawerOpen?'0':'1';}
+function toggleCartDrawer(){const isMobile=window.innerWidth<=800;if(!isMobile)return;cartDrawerOpen=!cartDrawerOpen;const panel=document.getElementById('cartPanel');if(panel){if(cartDrawerOpen)panel.classList.add('cart-open');else panel.classList.remove('cart-open');}const arrow=document.getElementById('cartDrawerArrow');if(arrow)arrow.textContent=cartDrawerOpen?'▲':'▼';const hint=document.getElementById('cartExpandHint');if(hint)hint.style.opacity=cartDrawerOpen?'0':'1';const header=document.getElementById('cartHeaderEl');if(header)header.style.display=cartDrawerOpen?'flex':'none';}
 function openCartDrawer(){if(window.innerWidth>800)return;if(cartDrawerOpen)return;cartDrawerOpen=true;const panel=document.getElementById('cartPanel');if(panel)panel.classList.add('cart-open');const arrow=document.getElementById('cartDrawerArrow');if(arrow)arrow.textContent='▲';}
 function _applyCartDrawer(){}
 window.addEventListener('resize',()=>{if(window.innerWidth>800){const panel=document.getElementById('cartPanel');if(panel)panel.classList.remove('cart-open');cartDrawerOpen=false;}});
