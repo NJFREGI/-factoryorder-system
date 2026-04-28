@@ -4,113 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>受発注システム / 订货系统</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-
-// ===== v5 手机端分类栏真正固定 =====
-let catStickyStartY = 0;
-let catStickyReady = false;
-
-function ensureCatStickyPlaceholder() {
-  const cat = document.getElementById('catTabWrap');
-  if (!cat) return null;
-  let ph = document.getElementById('catStickyPlaceholder');
-  if (!ph) {
-    ph = document.createElement('div');
-    ph.id = 'catStickyPlaceholder';
-    cat.parentNode.insertBefore(ph, cat.nextSibling);
-  }
-  return ph;
-}
-
-function resetCatSticky() {
-  const cat = document.getElementById('catTabWrap');
-  const ph = document.getElementById('catStickyPlaceholder');
-  if (cat) cat.classList.remove('cat-fixed');
-  if (ph) {
-    ph.style.display = 'none';
-    ph.style.height = '0px';
-  }
-  catStickyReady = false;
-}
-
-function setupCatSticky() {
-  const cat = document.getElementById('catTabWrap');
-  const page = document.getElementById('page-order');
-  if (!cat || !page || !page.classList.contains('active')) return;
-
-  if (window.innerWidth > 800) {
-    resetCatSticky();
-    return;
-  }
-
-  const ph = ensureCatStickyPlaceholder();
-  cat.classList.remove('cat-fixed');
-  if (ph) {
-    ph.style.display = 'none';
-    ph.style.height = '0px';
-  }
-
-  const rect = cat.getBoundingClientRect();
-  catStickyStartY = window.scrollY + rect.top;
-  catStickyReady = true;
-  updateCatSticky();
-}
-
-function updateCatSticky() {
-  const cat = document.getElementById('catTabWrap');
-  const page = document.getElementById('page-order');
-  const ph = ensureCatStickyPlaceholder();
-  if (!cat || !page || !ph) return;
-
-  if (window.innerWidth > 800 || !page.classList.contains('active')) {
-    resetCatSticky();
-    return;
-  }
-
-  if (!catStickyReady) {
-    const rect = cat.getBoundingClientRect();
-    catStickyStartY = window.scrollY + rect.top;
-    catStickyReady = true;
-  }
-
-  const shouldFix = window.scrollY >= catStickyStartY;
-  if (shouldFix) {
-    if (!cat.classList.contains('cat-fixed')) {
-      ph.style.height = cat.offsetHeight + 'px';
-      ph.style.display = 'block';
-      cat.classList.add('cat-fixed');
-    }
-  } else {
-    cat.classList.remove('cat-fixed');
-    ph.style.display = 'none';
-    ph.style.height = '0px';
-  }
-}
-
-window.addEventListener('scroll', updateCatSticky, { passive: true });
-window.addEventListener('resize', () => setTimeout(setupCatSticky, 120));
-window.addEventListener('orientationchange', () => setTimeout(setupCatSticky, 350));
-window.addEventListener('load', () => setTimeout(setupCatSticky, 600));
-
-const _oldSwitchTabForCatSticky = typeof switchTab === 'function' ? switchTab : null;
-if (_oldSwitchTabForCatSticky) {
-  switchTab = function(id) {
-    const result = _oldSwitchTabForCatSticky.apply(this, arguments);
-    setTimeout(setupCatSticky, 300);
-    return result;
-  };
-}
-
-const _oldRenderProductsForCatSticky = typeof renderProducts === 'function' ? renderProducts : null;
-if (_oldRenderProductsForCatSticky) {
-  renderProducts = function() {
-    const result = _oldRenderProductsForCatSticky.apply(this, arguments);
-    setTimeout(setupCatSticky, 100);
-    return result;
-  };
-}
-
-</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="受発注">
@@ -760,6 +654,16 @@ body.cart-lock {
   }
 }
 
+
+
+/* ===== v8 final force fixes ===== */
+@media(max-width:800px){
+  #catStickyPlaceholder{display:none;height:0;}
+  #page-order #catTabWrap{position:relative !important;top:auto !important;z-index:880;background:var(--bg);}
+  #page-order #catTabWrap.cat-fixed{position:fixed !important;top:0 !important;left:0 !important;right:0 !important;width:100vw !important;max-width:100vw !important;z-index:5000 !important;margin:0 !important;padding:10px 12px 12px !important;background:rgba(248,249,250,.98) !important;border-bottom:1px solid rgba(0,0,0,.08) !important;box-shadow:0 4px 18px rgba(0,0,0,.08) !important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+  #page-order #catTabWrap.cat-fixed #catTabInner{padding-left:4px;padding-right:4px;}
+  .cart-panel.cart-open textarea,.cart-panel.cart-open input,.cart-panel.cart-open button{touch-action:auto;}
+}
 </style>
 </head>
 <body>
@@ -1257,8 +1161,9 @@ function openTap(pid){tapProduct=allProducts.find(p=>p.id===pid);const inCart=ge
 function tapQtyChange(d){tapQtyVal=Math.max(1,Math.min(tapProduct.stock,tapQtyVal+d));document.getElementById('tapQtyVal').textContent=tapQtyVal;}
 function tapAddCart(){
   if(!tapProduct)return;
+  const keepY=window.scrollY||document.documentElement.scrollTop||0;
   let cart2=getCart();
-  const idx=cart2.findIndex(c=>c.product_id===tapProduct.id);
+  const idx=cart2.findIndex(c=>String(c.product_id)===String(tapProduct.id));
   const item={
     product_id:tapProduct.id,
     qty:tapQtyVal,
@@ -1274,11 +1179,18 @@ function tapAddCart(){
   setCart(cart2);
   closeModal('modalTap');
   renderProducts();
-  renderCart();
-  // 手机端加入商品后不自动展开购物车，只更新数量角标
-  if(window.innerWidth<=800){
-    closeCartDrawer();
+  renderCart({keepOpen:cartDrawerOpen});
+  if(window.innerWidth<=800 && !cartDrawerOpen){
+    const p=document.getElementById('cartPanel');
+    if(p)p.classList.remove('cart-open');
+    const arrow=document.getElementById('cartDrawerArrow');
+    if(arrow)arrow.textContent='▼';
+    if(typeof updateCartBadge==='function')updateCartBadge();
   }
+  requestAnimationFrame(()=>{
+    window.scrollTo(0,keepY);
+    if(typeof updateCategoryFixed==='function')updateCategoryFixed();
+  });
 }
 
 // CART
@@ -1553,9 +1465,11 @@ function lockBodyScroll(){
 
 function unlockBodyScroll(){
   if(window.innerWidth>800)return;
+  if(!document.body.classList.contains('cart-lock'))return;
   document.body.classList.remove('cart-lock');
   document.body.style.top='';
   window.scrollTo(0,bodyScrollY||0);
+  if(typeof updateCategoryFixed==='function')requestAnimationFrame(updateCategoryFixed);
 }
 
 function getCartCount(c){
@@ -1826,6 +1740,94 @@ function openPrintSettings() {
 
 async function printDeliveryOrder(orderId) { await printNobinsho(orderId); }
 
+
+
+/* ===== v8 final: stable fixed category + cart note guard ===== */
+let catFixedStartY=0;
+let catFixedReady=false;
+function ensureCategoryPlaceholder(){
+  const cat=document.getElementById('catTabWrap');
+  if(!cat)return null;
+  let ph=document.getElementById('catStickyPlaceholder');
+  if(!ph){
+    ph=document.createElement('div');
+    ph.id='catStickyPlaceholder';
+    cat.parentNode.insertBefore(ph,cat.nextSibling);
+  }
+  return ph;
+}
+function resetCategoryFixed(){
+  const cat=document.getElementById('catTabWrap');
+  const ph=document.getElementById('catStickyPlaceholder');
+  if(cat)cat.classList.remove('cat-fixed');
+  if(ph){ph.style.display='none';ph.style.height='0px';}
+  catFixedReady=false;
+}
+function setupCategoryFixed(){
+  const cat=document.getElementById('catTabWrap');
+  const page=document.getElementById('page-order');
+  if(!cat||!page||!page.classList.contains('active'))return;
+  if(window.innerWidth>800){resetCategoryFixed();return;}
+  const ph=ensureCategoryPlaceholder();
+  cat.classList.remove('cat-fixed');
+  if(ph){ph.style.display='none';ph.style.height='0px';}
+  const rect=cat.getBoundingClientRect();
+  catFixedStartY=(window.scrollY||document.documentElement.scrollTop||0)+rect.top;
+  catFixedReady=true;
+  updateCategoryFixed();
+}
+function updateCategoryFixed(){
+  const cat=document.getElementById('catTabWrap');
+  const page=document.getElementById('page-order');
+  const ph=ensureCategoryPlaceholder();
+  if(!cat||!page||!ph)return;
+  if(window.innerWidth>800||!page.classList.contains('active')){resetCategoryFixed();return;}
+  if(!catFixedReady){
+    const rect=cat.getBoundingClientRect();
+    catFixedStartY=(window.scrollY||document.documentElement.scrollTop||0)+rect.top;
+    catFixedReady=true;
+  }
+  const y=window.scrollY||document.documentElement.scrollTop||0;
+  if(y>=catFixedStartY){
+    if(!cat.classList.contains('cat-fixed')){
+      ph.style.height=cat.offsetHeight+'px';
+      ph.style.display='block';
+      cat.classList.add('cat-fixed');
+    }
+  }else{
+    cat.classList.remove('cat-fixed');
+    ph.style.display='none';
+    ph.style.height='0px';
+  }
+}
+function setupOrderNoteTouchGuard(){
+  const note=document.getElementById('orderNote');
+  if(!note||note.dataset.guardInstalled)return;
+  note.dataset.guardInstalled='1';
+  ['click','touchstart','touchmove','mousedown','pointerdown'].forEach(ev=>{
+    note.addEventListener(ev,e=>e.stopPropagation(),{passive:true});
+  });
+}
+window.addEventListener('scroll',()=>requestAnimationFrame(updateCategoryFixed),{passive:true});
+window.addEventListener('resize',()=>setTimeout(setupCategoryFixed,120));
+window.addEventListener('orientationchange',()=>setTimeout(setupCategoryFixed,350));
+window.addEventListener('load',()=>setTimeout(()=>{setupCategoryFixed();setupOrderNoteTouchGuard();if(typeof updateCartBadge==='function')updateCartBadge();},700));
+const _switchTabV8=typeof switchTab==='function'?switchTab:null;
+if(_switchTabV8){
+  switchTab=function(id){
+    const result=_switchTabV8.apply(this,arguments);
+    setTimeout(()=>{setupCategoryFixed();setupOrderNoteTouchGuard();},250);
+    return result;
+  };
+}
+const _renderProductsV8=typeof renderProducts==='function'?renderProducts:null;
+if(_renderProductsV8){
+  renderProducts=function(){
+    const result=_renderProductsV8.apply(this,arguments);
+    setTimeout(setupCategoryFixed,80);
+    return result;
+  };
+}
 </script>
 </body>
 </html>
