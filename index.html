@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>受発注システム / 订货系统</title>
+<title>受発注システム / 订货系统 - PRO UI v11</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1272,6 +1272,7 @@ let allProducts=[],searchTerm='',catFilter='',tapProduct=null,tapQtyVal=1;
 async function loadProducts(){showLoading(currentLang==='zh'?'加载商品...':'商品読み込み中...');const{data}=await sb.from('products').select('*').order('sort_order').order('created_at');allProducts=data||[];hideLoading();const prodCats=[...new Set(allProducts.map(p=>p.category).filter(Boolean))];const stored=ls('categories')||[];const merged=[...new Set([...stored,...prodCats])];if(merged.length)ls('categories',merged);buildCategoryFilter();renderProducts();}
 function buildCategoryFilter(){
   const cats=[...new Set(allProducts.map(p=>p.category).filter(Boolean))];
+  if(catFilter && !cats.includes(catFilter)){ catFilter=''; }
   const inner=document.getElementById('catTabInner');
   if(!inner)return;
   const allLabel=currentLang==='zh'?'全部':'すべて';
@@ -2170,7 +2171,7 @@ document.addEventListener('focusin',function(e){
 
   /* 覆盖分类点击：过滤后自动滚到商品区域 */
   window.filterProductsCat=function(v,btnEl){
-    window.catFilter=v;
+    catFilter=v;
     document.querySelectorAll('.cat-tab-btn').forEach(b=>b.classList.remove('active'));
     if(btnEl){btnEl.classList.add('active');btnEl.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});}
     const grid=$('productGrid');
@@ -2183,14 +2184,14 @@ document.addEventListener('focusin',function(e){
   const safe=(x)=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   window.renderProducts=function(){
     const cart2=typeof getCart==='function'?getCart():[];
-    let list=(window.allProducts||[]).filter(p=>{
-      const q=(window.searchTerm||'').toLowerCase();
+    let list=(allProducts||[]).filter(p=>{
+      const q=(searchTerm||'').toLowerCase();
       const nameMatch=String(p.name||'').toLowerCase().includes(q)||String(p.name_zh||'').includes(q)||String(p.spec||'').toLowerCase().includes(q);
-      const catMatch=!window.catFilter||p.category===window.catFilter;
+      const catMatch=!catFilter||p.category===catFilter;
       return nameMatch&&catMatch;
     });
     const grid=$('productGrid');if(!grid)return;
-    if(!list.length){grid.innerHTML=`<div class='no-data' style='grid-column:1/-1'>${window.currentLang==='zh'?'找不到商品':'商品が見つかりません'}</div>`;return;}
+    if(!list.length){grid.innerHTML=`<div class='no-data' style='grid-column:1/-1'>${currentLang==='zh'?'找不到商品':'商品が見つかりません'}</div>`;return;}
     grid.innerHTML=list.map(p=>{
       const inCart=cart2.find(c=>String(c.product_id)===String(p.id));
       const qty=inCart?Number(inCart.qty||0):0;
@@ -2221,19 +2222,19 @@ document.addEventListener('focusin',function(e){
 
   /* 覆盖加入购物车：飞入动画 + 保持当前位置 */
   window.tapAddCart=function(){
-    if(!window.tapProduct)return;
-    const origin=document.querySelector('#modalTap .btn-red')||document.querySelector(`[data-product-id="${window.CSS&&window.CSS.escape?window.CSS.escape(String(window.tapProduct.id)):String(window.tapProduct.id)}"]`);
+    if(!tapProduct)return;
+    const origin=document.querySelector('#modalTap .btn-red')||document.querySelector(`[data-product-id="${window.CSS&&window.CSS.escape?window.CSS.escape(String(tapProduct.id)):String(tapProduct.id)}"]`);
     const keepY=window.scrollY||document.documentElement.scrollTop||0;
     let cart2=typeof getCart==='function'?getCart():[];
-    const idx=cart2.findIndex(c=>String(c.product_id)===String(window.tapProduct.id));
-    const item={product_id:window.tapProduct.id,qty:window.tapQtyVal,product_name:window.tapProduct.name,product_name_zh:window.tapProduct.name_zh||'',product_spec:window.tapProduct.spec,product_emoji:'',unit_price:window.tapProduct.price,tax_rate:window.tapProduct.tax_rate};
-    if(idx>=0)cart2[idx].qty=window.tapQtyVal; else cart2.push(item);
+    const idx=cart2.findIndex(c=>String(c.product_id)===String(tapProduct.id));
+    const item={product_id:tapProduct.id,qty:tapQtyVal,product_name:tapProduct.name,product_name_zh:tapProduct.name_zh||'',product_spec:tapProduct.spec,product_emoji:'',unit_price:tapProduct.price,tax_rate:tapProduct.tax_rate};
+    if(idx>=0)cart2[idx].qty=tapQtyVal; else cart2.push(item);
     if(typeof setCart==='function')setCart(cart2);
     flyToCart(origin);
     if(typeof closeModal==='function')closeModal('modalTap');
     if(typeof renderProducts==='function')renderProducts();
-    if(typeof renderCart==='function')renderCart({keepOpen:window.cartDrawerOpen});
-    if(window.innerWidth<=800 && !window.cartDrawerOpen){
+    if(typeof renderCart==='function')renderCart({keepOpen:cartDrawerOpen});
+    if(window.innerWidth<=800 && !cartDrawerOpen){
       const p=$('cartPanel');if(p)p.classList.remove('cart-open');
       const arrow=$('cartDrawerArrow');if(arrow)arrow.textContent='▼';
       if(typeof updateCartBadge==='function')updateCartBadge();
@@ -2244,12 +2245,12 @@ document.addEventListener('focusin',function(e){
   /* 覆盖下单：保留 loading，成功改为动画弹窗 */
   window.submitOrder=async function(){
     const c=typeof getCart==='function'?getCart():[];
-    if(!c.length){alert(window.currentLang==='zh'?'购物车为空':'カートが空です');return;}
+    if(!c.length){alert(currentLang==='zh'?'购物车为空':'カートが空です');return;}
     const noteEl=$('orderNote');
     try{
       const {data:unconf}=await sb.from('orders').select('id').eq('shop_id',currentUser.id).eq('status','delivered').eq('receipt_confirmed',false).limit(1);
-      if(unconf&&unconf.length){alert(window.currentLang==='zh'?'请先确认上次收货':'前回の受取確認が完了していません');return;}
-      showLoading(window.currentLang==='zh'?'正在提交订单...':'注文を送信しています...');
+      if(unconf&&unconf.length){alert(currentLang==='zh'?'请先确认上次收货':'前回の受取確認が完了していません');return;}
+      showLoading(currentLang==='zh'?'正在提交订单...':'注文を送信しています...');
       const oDate=getOrderDate();
       const note=noteEl?noteEl.value:'';
       const {data:sameDay}=await sb.from('orders').select('id,order_no').eq('shop_id',currentUser.id).eq('order_date',oDate).eq('status','pending').limit(1);
@@ -2264,8 +2265,8 @@ document.addEventListener('focusin',function(e){
           await sb.from('orders').update({note:newNote,updated_at:new Date().toISOString()}).eq('id',orderId);
         }
         await recalcOrderDB(orderId);
-        successTitle=window.currentLang==='zh'?'已追加到今日订单':'注文を追加しました';
-        successText=window.currentLang==='zh'?`订单号 #${sameDay[0].order_no}\n已合并到今日订单`:`注文番号 #${sameDay[0].order_no}\n同日の注文にまとめられました`;
+        successTitle=currentLang==='zh'?'已追加到今日订单':'注文を追加しました';
+        successText=currentLang==='zh'?`订单号 #${sameDay[0].order_no}\n已合并到今日订单`:`注文番号 #${sameDay[0].order_no}\n同日の注文にまとめられました`;
       }else{
         const {data:newOrder,error}=await sb.from('orders').insert({shop_id:currentUser.id,shop_name:currentUser.name,order_date:oDate,note}).select().single();
         if(error)throw error;
@@ -2273,7 +2274,7 @@ document.addEventListener('focusin',function(e){
         const items=c.map(item=>({order_id:orderId,...itemPayload(item)}));
         await sb.from('order_items').insert(items);
         for(const item of c){
-          const p=(window.allProducts||[]).find(x=>String(x.id)===String(item.product_id));
+          const p=(allProducts||[]).find(x=>String(x.id)===String(item.product_id));
           if(p){
             const newStock=Math.max(0,Number(p.stock||0)-Number(item.qty||0));
             const newActive=newStock>0?p.active:false;
@@ -2283,8 +2284,8 @@ document.addEventListener('focusin',function(e){
         }
         await recalcOrderDB(orderId);
         const {data:finalOrder}=await sb.from('orders').select('order_no,total').eq('id',orderId).single();
-        successTitle=window.currentLang==='zh'?'下单成功':'注文完了';
-        successText=window.currentLang==='zh'?`订单号 #${finalOrder.order_no}\n合计 ${fmt(finalOrder.total)}（含税）`:`注文番号 #${finalOrder.order_no}\n合計 ${fmt(finalOrder.total)}（税込）`;
+        successTitle=currentLang==='zh'?'下单成功':'注文完了';
+        successText=currentLang==='zh'?`订单号 #${finalOrder.order_no}\n合计 ${fmt(finalOrder.total)}（含税）`:`注文番号 #${finalOrder.order_no}\n合計 ${fmt(finalOrder.total)}（税込）`;
       }
       hideLoading();
       setCart([]);
@@ -2304,7 +2305,7 @@ document.addEventListener('focusin',function(e){
   function protectNote(){
     const note=$('orderNote');if(!note||note.dataset.proV10)return;note.dataset.proV10='1';
     ['click','touchstart','touchend','pointerdown','focusin','mousedown'].forEach(ev=>{
-      note.addEventListener(ev,function(e){e.stopPropagation();if(window.innerWidth<=800&&window.cartDrawerOpen){const p=$('cartPanel');if(p)p.classList.add('cart-open');}},ev==='touchstart'?{passive:true}:false);
+      note.addEventListener(ev,function(e){e.stopPropagation();if(window.innerWidth<=800&&cartDrawerOpen){const p=$('cartPanel');if(p)p.classList.add('cart-open');}},ev==='touchstart'?{passive:true}:false);
     });
   }
 
