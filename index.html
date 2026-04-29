@@ -825,6 +825,38 @@ body{letter-spacing:.01em;background:#f7f8fa;}
 /* ===== V14 商品详情价格：只显示税抜，避免两行挤压 ===== */
 #tapPrice{font-size:32px !important;line-height:1.2 !important;white-space:nowrap !important;}
 @media(max-width:480px){#tapPrice{font-size:30px !important;}}
+
+
+/* ===== 音声注文 / 语音订货 V16 ===== */
+.voice-search-bar{align-items:stretch;}
+.voice-order-btn{min-height:46px;padding:10px 16px;border-radius:14px;box-shadow:0 6px 18px rgba(37,99,235,.18);}
+.voice-panel{background:#f8fafc;border:1px solid #e2e8f0;border-radius:18px;padding:16px;margin-bottom:14px;}
+.voice-main-text{width:100%;min-height:96px;border:2px solid #e2e8f0;border-radius:16px;padding:14px 16px;font-size:15px;line-height:1.7;font-family:inherit;resize:vertical;background:#fff;color:#111827;}
+.voice-main-text:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 4px rgba(37,99,235,.10);}
+.voice-status{font-size:13px;color:#64748b;line-height:1.6;margin-top:8px;min-height:22px;}
+.voice-status.listening{color:#dc2626;font-weight:700;}
+.voice-result-list{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
+.voice-result-item{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:12px;display:grid;grid-template-columns:1fr 76px;gap:10px;align-items:center;}
+.voice-result-main{min-width:0;}
+.voice-result-raw{font-size:12px;color:#94a3b8;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.voice-result-select{width:100%;border:1.8px solid #dbe3ec;border-radius:12px;padding:10px 12px;font-size:14px;font-family:inherit;background:#fff;color:#111827;}
+.voice-result-select:focus{outline:none;border-color:var(--red);}
+.voice-qty-input{width:72px;text-align:center;border:1.8px solid #dbe3ec;border-radius:12px;padding:10px 8px;font-size:16px;font-weight:800;font-family:inherit;background:#fff;}
+.voice-qty-input:focus{outline:none;border-color:var(--red);}
+.voice-empty{padding:22px 12px;text-align:center;color:#94a3b8;font-size:14px;line-height:1.8;}
+.voice-sample{font-size:12px;color:#64748b;line-height:1.8;background:#fff;border:1px dashed #cbd5e1;border-radius:14px;padding:12px;margin-top:10px;}
+.voice-action-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-top:14px;}
+.voice-rec-btn{background:#dc2626;color:white;}
+.voice-rec-btn.listening{animation:voicePulse 1s infinite;}
+@keyframes voicePulse{0%{box-shadow:0 0 0 0 rgba(220,38,38,.35);}70%{box-shadow:0 0 0 12px rgba(220,38,38,0);}100%{box-shadow:0 0 0 0 rgba(220,38,38,0);}}
+@media(max-width:800px){
+  .voice-search-bar{display:grid;grid-template-columns:1fr;gap:10px;}
+  .voice-order-btn{width:100%;justify-content:center;}
+  .voice-result-item{grid-template-columns:1fr 68px;padding:11px;}
+  .voice-qty-input{width:64px;}
+  .voice-action-row .btn{flex:1;justify-content:center;}
+}
+
 </style>
 </head>
 <body>
@@ -919,8 +951,9 @@ body{letter-spacing:.01em;background:#f7f8fa;}
             </div>
             <div style="margin-left:auto;font-size:13px;opacity:.9;" id="cutoffStatus"></div>
           </div>
-          <div class="search-bar">
+          <div class="search-bar voice-search-bar">
             <input class="search-input" placeholder="🔍 商品名検索 / 搜索商品..." oninput="filterProducts(this.value)" id="productSearch">
+            <button type="button" class="btn btn-blue voice-order-btn" onclick="openVoiceOrderModal()">🎙 <span class="ja">音声注文</span><span class="zh">语音订货</span></button>
           </div>
           <!-- ★ 分类标签横向滑动 ★ -->
           <div class="cat-tab-wrap" id="catTabWrap">
@@ -1213,6 +1246,40 @@ body{letter-spacing:.01em;background:#f7f8fa;}
       <button class="modal-close" onclick="closeModal('modalReceipt')">✕</button>
     </div>
     <div id="modalReceiptBody"></div>
+  </div>
+</div>
+
+
+
+<!-- Voice Order Modal / 音声注文 -->
+<div class="modal-overlay" id="modalVoiceOrder">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">🎙 <span class="ja">音声注文</span><span class="zh">语音订货</span></div>
+      <button class="modal-close" onclick="closeVoiceOrderModal()">✕</button>
+    </div>
+    <div class="voice-panel">
+      <textarea class="voice-main-text" id="voiceText" placeholder="例：干豆腐三袋、鶏もも肉2パック、豆腐皮一份"></textarea>
+      <div class="voice-status" id="voiceStatus"><span class="ja">マイクボタンを押して話してください。認識後、商品候補を確認してカートへ追加できます。</span><span class="zh">点击麦克风后说出商品和数量。识别后确认商品候选，再加入购物车。</span></div>
+      <div class="voice-sample">
+        <strong><span class="ja">話し方例：</span><span class="zh">说法示例：</span></strong><br>
+        <span class="ja">「干豆腐を三袋、鶏もも肉を2個、豆腐皮を一つ」</span>
+        <span class="zh">“干豆腐三袋，鸡腿肉两包，豆腐皮一份”</span>
+      </div>
+      <div class="voice-action-row">
+        <button type="button" class="btn voice-rec-btn" id="voiceRecBtn" onclick="startVoiceRecognition()">🎙 <span class="ja">話す</span><span class="zh">开始说话</span></button>
+        <button type="button" class="btn btn-outline" onclick="parseVoiceTextFromInput()">🔎 <span class="ja">文字から解析</span><span class="zh">解析文字</span></button>
+        <button type="button" class="btn btn-outline" onclick="clearVoiceOrder()">🧹 <span class="ja">クリア</span><span class="zh">清空</span></button>
+      </div>
+    </div>
+    <div id="voiceResultWrap">
+      <div class="voice-empty"><span class="ja">認識結果がここに表示されます</span><span class="zh">识别结果会显示在这里</span></div>
+    </div>
+    <div class="divider"></div>
+    <div class="flex gap-8" style="justify-content:flex-end;flex-wrap:wrap;">
+      <button class="btn btn-outline" onclick="closeVoiceOrderModal()"><span class="ja">キャンセル</span><span class="zh">取消</span></button>
+      <button class="btn btn-red" onclick="addVoiceItemsToCart()">🛒 <span class="ja">カートに追加</span><span class="zh">加入购物车</span></button>
+    </div>
   </div>
 </div>
 
@@ -2475,6 +2542,218 @@ document.addEventListener('focusin',function(e){
   if(typeof oldSwitch==='function'){
     window.switchTab=function(id){const r=oldSwitch.apply(this,arguments);setTimeout(()=>{setNavHeightVar();protectNote();window.setupCategoryFixed&&window.setupCategoryFixed();},250);return r;};
   }
+})();
+
+
+
+/* ===== V16 音声注文 / 语音订货 第一版 ===== */
+(function(){
+  let voiceRecognition=null;
+  let voiceListening=false;
+  let voiceParsedItems=[];
+
+  function V$(id){return document.getElementById(id);}
+  function vSafe(x){return String(x??'').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
+  function vNorm(s){return String(s||'').toLowerCase().replace(/[\s　・,，、。\.\/／\-ー_（）()\[\]【】]/g,'');}
+
+  const cnNumMap={零:0,〇:0,一:1,壹:1,二:2,两:2,兩:2,贰:2,三:3,叁:3,四:4,肆:4,五:5,伍:5,六:6,陆:6,七:7,柒:7,八:8,捌:8,九:9,玖:9,十:10};
+  const jpNumWords={ひとつ:1,一つ:1,いっこ:1,一個:1,いち:1,にこ:2,二個:2,ふたつ:2,二つ:2,さんこ:3,三個:3,みっつ:3,三つ:3,よっつ:4,四つ:4,ごこ:5,五個:5,むっつ:6,六つ:6,ななつ:7,七つ:7,やっつ:8,八つ:8,ここのつ:9,九つ:9,じゅっこ:10,十個:10};
+
+  function chineseNumberToInt(str){
+    str=String(str||'').trim();
+    if(!str)return null;
+    if(/^\d+$/.test(str))return parseInt(str,10);
+    if(jpNumWords[str])return jpNumWords[str];
+    if(str.length===1 && cnNumMap[str]!=null)return cnNumMap[str];
+    if(str.includes('十')){
+      const parts=str.split('十');
+      const left=parts[0]?cnNumMap[parts[0]]||parseInt(parts[0],10)||1:1;
+      const right=parts[1]?cnNumMap[parts[1]]||parseInt(parts[1],10)||0:0;
+      return left*10+right;
+    }
+    return null;
+  }
+
+  function getQtyAround(text, start, end){
+    const after=text.slice(end, Math.min(text.length,end+12));
+    const before=text.slice(Math.max(0,start-8), start);
+    const re=/(\d+|[零〇一二两兩三四五六七八九十]{1,3}|ひとつ|ふたつ|みっつ|よっつ|一つ|二つ|三つ|四つ|五つ|六つ|七つ|八つ|九つ|一個|二個|三個|四個|五個|六個|七個|八個|九個|十個)\s*(袋|包|份|个|個|盒|箱|本|枚|パック|ケース|kg|g|キロ|つ)?/i;
+    let m=after.match(re);
+    if(m){const n=chineseNumberToInt(m[1]);if(n&&n>0)return n;}
+    const reBefore=/(\d+|[零〇一二两兩三四五六七八九十]{1,3}|ひとつ|ふたつ|みっつ|よっつ|一つ|二つ|三つ|四つ|五つ|六つ|七つ|八つ|九つ|一個|二個|三個|四個|五個|六個|七個|八個|九個|十個)\s*(袋|包|份|个|個|盒|箱|本|枚|パック|ケース|kg|g|キロ|つ)?\s*$/i;
+    m=before.match(reBefore);
+    if(m){const n=chineseNumberToInt(m[1]);if(n&&n>0)return n;}
+    return 1;
+  }
+
+  function productAliases(p){
+    const arr=[];
+    [p.name,p.name_zh,p.spec].forEach(x=>{if(x)arr.push(String(x));});
+    // 常见口语别名，可继续扩展
+    const zh=String(p.name_zh||'');
+    const ja=String(p.name||'');
+    if(/鶏もも|鸡腿|雞腿|もも肉/.test(zh+ja))arr.push('鸡腿肉','雞腿肉','鸡肉腿','もも肉');
+    if(/干豆腐|乾豆腐/.test(zh+ja))arr.push('干豆腐','乾豆腐','豆腐干');
+    if(/豆腐皮/.test(zh+ja))arr.push('豆皮','豆腐皮');
+    if(/ジャガイモ|土豆|じゃがいも/.test(zh+ja))arr.push('土豆','马铃薯','ジャガイモ','じゃがいも');
+    if(/キャベツ|卷心菜|高丽菜|高麗菜/.test(zh+ja))arr.push('卷心菜','高丽菜','高麗菜','キャベツ');
+    return [...new Set(arr.filter(Boolean))].sort((a,b)=>String(b).length-String(a).length);
+  }
+
+  function findCandidates(raw){
+    const text=vNorm(raw);
+    const scored=[];
+    (allProducts||[]).forEach(p=>{
+      if(!p.active || Number(p.stock)<=0)return;
+      let score=0;
+      for(const a of productAliases(p)){
+        const na=vNorm(a);
+        if(!na || na.length<1)continue;
+        if(text.includes(na))score=Math.max(score, 100+na.length);
+        else if(na.includes(text)&&text.length>=2)score=Math.max(score, 70+text.length);
+      }
+      if(score>0)scored.push({product:p,score});
+    });
+    scored.sort((a,b)=>b.score-a.score);
+    return scored.slice(0,5).map(x=>x.product);
+  }
+
+  function parseVoiceText(text){
+    text=String(text||'').trim();
+    if(!text)return [];
+    const results=[];
+    const used=new Set();
+    const products=(allProducts||[]).filter(p=>p.active && Number(p.stock)>0);
+
+    products.forEach(p=>{
+      for(const alias of productAliases(p)){
+        const rawAlias=String(alias||'').trim();
+        if(!rawAlias)continue;
+        const idx=text.indexOf(rawAlias);
+        if(idx>=0){
+          const key=String(p.id);
+          if(used.has(key))break;
+          used.add(key);
+          const qty=getQtyAround(text, idx, idx+rawAlias.length);
+          results.push({raw:rawAlias, qty, product_id:p.id, candidates:[p]});
+          break;
+        }
+      }
+    });
+
+    // 对没有直接匹配的短句，做候选匹配
+    const parts=text.split(/[，,、。\.\n；;和と]/).map(x=>x.trim()).filter(Boolean);
+    parts.forEach(part=>{
+      const already=results.some(r=>part.includes(r.raw));
+      if(already)return;
+      const cleaned=part.replace(/(\d+|[零〇一二两兩三四五六七八九十]{1,3}|ひとつ|ふたつ|みっつ|よっつ|一つ|二つ|三つ|四つ|五つ|六つ|七つ|八つ|九つ|一個|二個|三個|四個|五個|六個|七個|八個|九個|十個)\s*(袋|包|份|个|個|盒|箱|本|枚|パック|ケース|kg|g|キロ|つ)?/ig,'').replace(/我要|我想要|ください|お願いします|を|が|の|買う|注文|订|要/g,'').trim();
+      if(cleaned.length<2)return;
+      const cand=findCandidates(cleaned);
+      if(cand.length){
+        const first=cand[0];
+        if(results.some(r=>String(r.product_id)===String(first.id)))return;
+        results.push({raw:part, qty:getQtyAround(part,0,cleaned.length), product_id:first.id, candidates:cand});
+      }
+    });
+    return results;
+  }
+
+  function renderVoiceResults(items){
+    voiceParsedItems=items||[];
+    const wrap=V$('voiceResultWrap');
+    if(!wrap)return;
+    if(!voiceParsedItems.length){
+      wrap.innerHTML=`<div class="voice-empty">${currentLang==='zh'?'没有识别到可匹配的商品。可以修改文字后点击“解析文字”。':'一致する商品が見つかりません。文字を修正して「文字から解析」を押してください。'}</div>`;
+      return;
+    }
+    wrap.innerHTML=`<div class="voice-result-list">${voiceParsedItems.map((item,i)=>{
+      const opts=(item.candidates||[]).map(p=>`<option value="${vSafe(p.id)}" ${String(p.id)===String(item.product_id)?'selected':''}>${vSafe(p.name)}${p.name_zh?' / '+vSafe(p.name_zh):''}　${fmt(p.price)}（税抜）</option>`).join('');
+      return `<div class="voice-result-item">
+        <div class="voice-result-main">
+          <div class="voice-result-raw">${currentLang==='zh'?'识别':'認識'}：${vSafe(item.raw)}</div>
+          <select class="voice-result-select" data-voice-index="${i}">${opts}</select>
+        </div>
+        <input class="voice-qty-input" data-voice-qty="${i}" type="number" min="1" step="1" value="${Number(item.qty||1)}">
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  window.openVoiceOrderModal=function(){
+    const text=V$('voiceText');
+    const status=V$('voiceStatus');
+    if(text && !text.value)text.value='';
+    if(status){status.classList.remove('listening');status.innerHTML=currentLang==='zh'?'点击麦克风后说出商品和数量。识别后确认商品候选，再加入购物车。':'マイクボタンを押して話してください。認識後、商品候補を確認してカートへ追加できます。';}
+    renderVoiceResults([]);
+    openModal('modalVoiceOrder');
+  };
+  window.closeVoiceOrderModal=function(){
+    if(voiceRecognition && voiceListening){try{voiceRecognition.stop();}catch(e){}}
+    voiceListening=false;
+    const btn=V$('voiceRecBtn');if(btn)btn.classList.remove('listening');
+    closeModal('modalVoiceOrder');
+  };
+  window.clearVoiceOrder=function(){
+    const text=V$('voiceText');if(text)text.value='';
+    renderVoiceResults([]);
+    const status=V$('voiceStatus');if(status){status.classList.remove('listening');status.textContent=currentLang==='zh'?'已清空。':'クリアしました。';}
+  };
+  window.parseVoiceTextFromInput=function(){
+    const text=V$('voiceText')?.value||'';
+    renderVoiceResults(parseVoiceText(text));
+  };
+
+  window.startVoiceRecognition=function(){
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    const status=V$('voiceStatus');
+    const btn=V$('voiceRecBtn');
+    if(!SR){
+      if(status)status.textContent=currentLang==='zh'?'当前浏览器不支持语音识别。请手动输入文字后点击“解析文字”。':'このブラウザは音声認識に対応していません。文字を入力して解析してください。';
+      return;
+    }
+    if(voiceListening && voiceRecognition){try{voiceRecognition.stop();}catch(e){};return;}
+    voiceRecognition=new SR();
+    voiceRecognition.lang=currentLang==='zh'?'zh-CN':'ja-JP';
+    voiceRecognition.interimResults=false;
+    voiceRecognition.continuous=false;
+    voiceRecognition.onstart=function(){voiceListening=true;if(btn)btn.classList.add('listening');if(status){status.classList.add('listening');status.textContent=currentLang==='zh'?'正在听，请说出商品和数量...':'聞き取り中です。商品名と数量を話してください...';}};
+    voiceRecognition.onresult=function(e){
+      const transcript=Array.from(e.results).map(r=>r[0].transcript).join(' ');
+      const textEl=V$('voiceText');if(textEl)textEl.value=transcript;
+      if(status){status.classList.remove('listening');status.textContent=(currentLang==='zh'?'识别完成：':'認識完了：')+transcript;}
+      renderVoiceResults(parseVoiceText(transcript));
+    };
+    voiceRecognition.onerror=function(e){if(status){status.classList.remove('listening');status.textContent=(currentLang==='zh'?'语音识别失败：':'音声認識エラー：')+(e.error||'error');}};
+    voiceRecognition.onend=function(){voiceListening=false;if(btn)btn.classList.remove('listening');if(status)status.classList.remove('listening');};
+    try{voiceRecognition.start();}catch(e){if(status)status.textContent=e.message||String(e);}
+  };
+
+  window.addVoiceItemsToCart=function(){
+    const rows=[...document.querySelectorAll('.voice-result-item')];
+    if(!rows.length){alert(currentLang==='zh'?'请先语音识别或解析文字':'先に音声認識または文字解析をしてください');return;}
+    const keepY=window.scrollY||document.documentElement.scrollTop||0;
+    const cart=typeof getCart==='function'?getCart():[];
+    let added=0;
+    rows.forEach(row=>{
+      const sel=row.querySelector('.voice-result-select');
+      const qtyEl=row.querySelector('.voice-qty-input');
+      const pid=sel?.value;
+      const qty=Math.max(1,parseInt(qtyEl?.value||'1',10)||1);
+      const p=(allProducts||[]).find(x=>String(x.id)===String(pid));
+      if(!p)return;
+      const idx=cart.findIndex(c=>String(c.product_id)===String(p.id));
+      if(idx>=0)cart[idx].qty=Number(cart[idx].qty||0)+qty;
+      else cart.push({product_id:p.id,qty,product_name:p.name,product_name_zh:p.name_zh||'',product_spec:p.spec,product_emoji:'',unit_price:p.price,tax_rate:p.tax_rate});
+      added+=qty;
+    });
+    if(!added){alert(currentLang==='zh'?'没有可加入的商品':'追加できる商品がありません');return;}
+    if(typeof setCart==='function')setCart(cart);
+    if(typeof renderProducts==='function')renderProducts();
+    if(typeof renderCart==='function')renderCart({keepOpen:false});
+    if(typeof updateCartBadge==='function')updateCartBadge();
+    closeVoiceOrderModal();
+    requestAnimationFrame(()=>window.scrollTo(0,keepY));
+    alert(currentLang==='zh'?`已加入购物车：${added}件`:`カートに追加しました：${added}点`);
+  };
 })();
 
 </script>
