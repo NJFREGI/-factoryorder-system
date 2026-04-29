@@ -1260,7 +1260,7 @@ body{letter-spacing:.01em;background:#f7f8fa;}
     </div>
     <div class="voice-panel">
       <textarea class="voice-main-text" id="voiceText" placeholder="例：干豆腐三袋、鶏もも肉2パック、豆腐皮一份"></textarea>
-      <div class="voice-status" id="voiceStatus"><span class="ja">マイクボタンを押して話してください。認識後、商品候補を確認してカートへ追加できます。</span><span class="zh">点击麦克风后说出商品和数量。识别后确认商品候选，再加入购物车。</span></div>
+      <div class="voice-status" id="voiceStatus"><span class="ja">マイクボタンを押して話してください。対応しないブラウザでは文字入力で解析できます。</span><span class="zh">点击麦克风后说出商品和数量。识别后确认商品候选，再加入购物车。若手机浏览器不支持，请手动输入文字后点“解析文字”。</span></div>
       <div class="voice-sample">
         <strong><span class="ja">話し方例：</span><span class="zh">说法示例：</span></strong><br>
         <span class="ja">「干豆腐を三袋、鶏もも肉を2個、豆腐皮を一つ」</span>
@@ -2682,7 +2682,7 @@ document.addEventListener('focusin',function(e){
     const text=V$('voiceText');
     const status=V$('voiceStatus');
     if(text && !text.value)text.value='';
-    if(status){status.classList.remove('listening');status.innerHTML=currentLang==='zh'?'点击麦克风后说出商品和数量。识别后确认商品候选，再加入购物车。':'マイクボタンを押して話してください。認識後、商品候補を確認してカートへ追加できます。';}
+    if(status){status.classList.remove('listening');status.innerHTML=currentLang==='zh'?'点击麦克风后说出商品和数量。识别后确认商品候选，再加入购物车。若手机浏览器不支持，请手动输入文字后点“解析文字”。':'マイクボタンを押して話してください。対応しないブラウザでは文字入力で解析できます。';}
     renderVoiceResults([]);
     openModal('modalVoiceOrder');
   };
@@ -2702,29 +2702,147 @@ document.addEventListener('focusin',function(e){
     renderVoiceResults(parseVoiceText(text));
   };
 
-  window.startVoiceRecognition=function(){
+  function voiceSupportInfo(){
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    const secure=window.isSecureContext || location.protocol==='https:' || location.hostname==='localhost';
+    return {SR,secure};
+  }
+
+  function setVoiceStatus(msg, listening){
     const status=V$('voiceStatus');
+    if(!status)return;
+    status.classList.toggle('listening',!!listening);
+    status.textContent=msg;
+  }
+
+  async function checkMicPermission(){
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      return {ok:true, note:'getUserMedia unavailable'};
+    }
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      stream.getTracks().forEach(t=>t.stop());
+      return {ok:true};
+    }catch(e){
+      return {ok:false, error:e&&e.name?e.name:String(e)};
+    }
+  }
+
+  window.startVoiceRecognition=async function(){
+    const info=voiceSupportInfo();
     const btn=V$('voiceRecBtn');
-    if(!SR){
-      if(status)status.textContent=currentLang==='zh'?'当前浏览器不支持语音识别。请手动输入文字后点击“解析文字”。':'このブラウザは音声認識に対応していません。文字を入力して解析してください。';
+
+    if(voiceListening && voiceRecognition){
+      try{voiceRecognition.stop();}catch(e){}
+      setVoiceStatus(currentLang==='zh'?'已停止收音。':'聞き取りを停止しました。',false);
       return;
     }
-    if(voiceListening && voiceRecognition){try{voiceRecognition.stop();}catch(e){};return;}
-    voiceRecognition=new SR();
-    voiceRecognition.lang=currentLang==='zh'?'zh-CN':'ja-JP';
-    voiceRecognition.interimResults=false;
-    voiceRecognition.continuous=false;
-    voiceRecognition.onstart=function(){voiceListening=true;if(btn)btn.classList.add('listening');if(status){status.classList.add('listening');status.textContent=currentLang==='zh'?'正在听，请说出商品和数量...':'聞き取り中です。商品名と数量を話してください...';}};
-    voiceRecognition.onresult=function(e){
-      const transcript=Array.from(e.results).map(r=>r[0].transcript).join(' ');
-      const textEl=V$('voiceText');if(textEl)textEl.value=transcript;
-      if(status){status.classList.remove('listening');status.textContent=(currentLang==='zh'?'识别完成：':'認識完了：')+transcript;}
-      renderVoiceResults(parseVoiceText(transcript));
-    };
-    voiceRecognition.onerror=function(e){if(status){status.classList.remove('listening');status.textContent=(currentLang==='zh'?'语音识别失败：':'音声認識エラー：')+(e.error||'error');}};
-    voiceRecognition.onend=function(){voiceListening=false;if(btn)btn.classList.remove('listening');if(status)status.classList.remove('listening');};
-    try{voiceRecognition.start();}catch(e){if(status)status.textContent=e.message||String(e);}
+
+    if(!info.secure){
+      setVoiceStatus(currentLang==='zh'?'语音识别需要 HTTPS 页面。请用 https:// 开头的网址打开。':'音声認識には HTTPS が必要です。https:// のURLで開いてください。',false);
+      return;
+    }
+
+    if(!info.SR){
+      setVoiceStatus(currentLang==='zh'?'这个手机浏览器不支持网页语音识别。请用 Android Chrome 打开，或先手动输入文字后点“解析文字”。':'このブラウザはWeb音声認識に対応していません。Android Chromeで開くか、文字入力で解析してください。',false);
+      return;
+    }
+
+    setVoiceStatus(currentLang==='zh'?'正在请求麦克风权限...':'マイク権限を確認しています...',true);
+    const mic=await checkMicPermission();
+    if(!mic.ok){
+      const msg=currentLang==='zh'
+        ?`麦克风权限没有打开：${mic.error}。请在浏览器地址栏左侧锁头/设置里允许麦克风，然后刷新页面。`
+        :`マイク権限が許可されていません：${mic.error}。ブラウザ設定でマイクを許可してから再読み込みしてください。`;
+      setVoiceStatus(msg,false);
+      return;
+    }
+
+    try{
+      voiceRecognition=new info.SR();
+      voiceRecognition.lang=currentLang==='zh'?'zh-CN':'ja-JP';
+      voiceRecognition.interimResults=true;
+      voiceRecognition.continuous=false;
+      voiceRecognition.maxAlternatives=3;
+
+      let finalText='';
+      let heardSomething=false;
+      let startedAt=Date.now();
+
+      voiceRecognition.onstart=function(){
+        voiceListening=true;
+        if(btn)btn.classList.add('listening');
+        setVoiceStatus(currentLang==='zh'?'正在听，请说清楚商品名和数量。例如：干豆腐三袋，鸡腿肉两包。':'聞き取り中です。商品名と数量を話してください。例：ジャガイモ2個、鶏もも肉3パック。',true);
+      };
+
+      voiceRecognition.onspeechstart=function(){
+        heardSomething=true;
+        setVoiceStatus(currentLang==='zh'?'已听到声音，正在识别...':'音声を検出しました。認識中です...',true);
+      };
+
+      voiceRecognition.onresult=function(e){
+        let interim='';
+        for(let i=e.resultIndex;i<e.results.length;i++){
+          const piece=e.results[i][0]?.transcript||'';
+          if(e.results[i].isFinal)finalText+=piece;
+          else interim+=piece;
+        }
+        const show=(finalText||interim||'').trim();
+        const textEl=V$('voiceText');
+        if(textEl && show)textEl.value=show;
+        if(show){
+          setVoiceStatus((currentLang==='zh'?'识别中：':'認識中：')+show,true);
+          const items=parseVoiceText(show);
+          if(items.length)renderVoiceResults(items);
+        }
+      };
+
+      voiceRecognition.onnomatch=function(){
+        setVoiceStatus(currentLang==='zh'?'听到了声音，但没有识别出文字。请靠近麦克风再试一次，或手动输入后解析。':'音声は検出されましたが文字にできませんでした。もう一度お試しください。',false);
+      };
+
+      voiceRecognition.onerror=function(e){
+        voiceListening=false;
+        if(btn)btn.classList.remove('listening');
+        const code=e&&e.error?e.error:'error';
+        const zhMap={
+          'not-allowed':'麦克风权限被拒绝。请打开浏览器麦克风权限后刷新页面。',
+          'service-not-allowed':'浏览器语音服务不可用。建议用 Android Chrome 打开。',
+          'no-speech':'没有检测到说话声音。请点击麦克风后马上说话。',
+          'audio-capture':'没有检测到麦克风。请检查手机浏览器权限。',
+          'network':'语音识别网络连接失败。请检查网络或换 Chrome。',
+          'aborted':'语音识别已中止。'
+        };
+        const jaMap={
+          'not-allowed':'マイク権限が拒否されました。ブラウザ設定でマイクを許可してください。',
+          'service-not-allowed':'音声認識サービスが利用できません。Android Chromeでお試しください。',
+          'no-speech':'音声が検出されませんでした。マイクを押したらすぐ話してください。',
+          'audio-capture':'マイクを検出できません。ブラウザ権限を確認してください。',
+          'network':'音声認識のネットワーク接続に失敗しました。',
+          'aborted':'音声認識が中断されました。'
+        };
+        setVoiceStatus((currentLang==='zh'?zhMap[code]:jaMap[code]) || ((currentLang==='zh'?'语音识别失败：':'音声認識エラー：')+code),false);
+      };
+
+      voiceRecognition.onend=function(){
+        voiceListening=false;
+        if(btn)btn.classList.remove('listening');
+        const text=(V$('voiceText')?.value||finalText||'').trim();
+        if(text){
+          const items=parseVoiceText(text);
+          renderVoiceResults(items);
+          setVoiceStatus((currentLang==='zh'?'识别完成：':'認識完了：')+text,false);
+        }else if(Date.now()-startedAt>500 && !heardSomething){
+          setVoiceStatus(currentLang==='zh'?'没有听到声音。请确认麦克风权限，并点击后马上说话。':'音声が検出されませんでした。マイク権限を確認し、押した後すぐ話してください。',false);
+        }
+      };
+
+      voiceRecognition.start();
+    }catch(e){
+      voiceListening=false;
+      if(btn)btn.classList.remove('listening');
+      setVoiceStatus(currentLang==='zh'?('启动语音失败：'+(e.message||e)):('音声認識を開始できません：'+(e.message||e)),false);
+    }
   };
 
   window.addVoiceItemsToCart=function(){
