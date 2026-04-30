@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>受発注システム / 订货系统 - PRO UI v13</title>
+<title>受発注システム / 订货系统 - PRO UI v19 Volcengine Voice</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -857,6 +857,25 @@ body{letter-spacing:.01em;background:#f7f8fa;}
   .voice-action-row .btn{flex:1;justify-content:center;}
 }
 
+
+
+/* ===== V19 火山引擎 ASR 语音订货：按住说话 + 删除候选 ===== */
+.voice-api-config{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-top:10px;}
+.voice-api-input{width:100%;border:1.5px solid #dbe3ec;border-radius:12px;padding:10px 12px;font-size:12px;font-family:inherit;background:#fff;color:#334155;}
+.voice-api-input:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 4px rgba(37,99,235,.08);}
+.voice-hold-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;margin:16px 0 6px;}
+.voice-hold-btn{width:100%;min-height:58px;border:none;border-radius:999px;background:linear-gradient(180deg,#2563eb,#1d4ed8);color:#fff;font-family:inherit;font-size:16px;font-weight:800;letter-spacing:.02em;box-shadow:0 10px 24px rgba(37,99,235,.24);cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;transition:transform .12s ease,box-shadow .12s ease,background .12s ease;}
+.voice-hold-btn:active,.voice-hold-btn.recording{transform:scale(.985);background:linear-gradient(180deg,#dc2626,#b91c1c);box-shadow:0 0 0 8px rgba(220,38,38,.10),0 12px 28px rgba(220,38,38,.28);}
+.voice-hold-btn.recording{animation:voiceHoldPulse 1s infinite;}
+@keyframes voiceHoldPulse{0%{box-shadow:0 0 0 0 rgba(220,38,38,.32),0 12px 28px rgba(220,38,38,.28);}70%{box-shadow:0 0 0 14px rgba(220,38,38,0),0 12px 28px rgba(220,38,38,.28);}100%{box-shadow:0 0 0 0 rgba(220,38,38,0),0 12px 28px rgba(220,38,38,.28);}}
+.voice-timer{font-size:13px;color:#64748b;font-weight:700;min-height:18px;}
+.voice-result-item{grid-template-columns:1fr 76px 42px;}
+.voice-delete-btn{width:38px;height:38px;border:none;border-radius:12px;background:#f1f5f9;color:#64748b;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s ease;}
+.voice-delete-btn:hover{background:#fee2e2;color:#dc2626;}
+.voice-provider-badge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:11px;font-weight:800;padding:4px 9px;margin-left:6px;}
+.voice-help-text{font-size:11px;color:#94a3b8;line-height:1.7;margin-top:6px;}
+@media(max-width:800px){.voice-api-config{grid-template-columns:1fr;}.voice-hold-btn{min-height:62px;font-size:17px;}.voice-result-item{grid-template-columns:1fr 64px 38px;}.voice-delete-btn{width:36px;height:36px;}}
+
 </style>
 </head>
 <body>
@@ -1255,19 +1274,34 @@ body{letter-spacing:.01em;background:#f7f8fa;}
 <div class="modal-overlay" id="modalVoiceOrder">
   <div class="modal modal-lg">
     <div class="modal-header">
-      <div class="modal-title">🎙 <span class="ja">音声注文</span><span class="zh">语音订货</span></div>
+      <div class="modal-title">🎙 <span class="ja">音声注文</span><span class="zh">语音订货</span><span class="voice-provider-badge">火山引擎 ASR</span></div>
       <button class="modal-close" onclick="closeVoiceOrderModal()">✕</button>
     </div>
     <div class="voice-panel">
       <textarea class="voice-main-text" id="voiceText" placeholder="例：干豆腐三袋、鶏もも肉2パック、豆腐皮一份"></textarea>
-      <div class="voice-status" id="voiceStatus"><span class="ja">マイクボタンを押して話してください。対応しないブラウザでは文字入力で解析できます。</span><span class="zh">点击麦克风后说出商品和数量。识别后确认商品候选，再加入购物车。若手机浏览器不支持，请手动输入文字后点“解析文字”。</span></div>
+      <div class="voice-status" id="voiceStatus"><span class="ja">下のボタンを押しながら話し、離すと火山引擎 ASRで文字化します。</span><span class="zh">按住下面按钮说话，松开后使用 火山引擎 ASR 识别文字。</span></div>
+
+      <div class="voice-hold-wrap">
+        <button type="button" class="voice-hold-btn" id="voiceHoldBtn">🎙 <span class="ja">押しながら話す</span><span class="zh">按住说话</span></button>
+        <div class="voice-timer" id="voiceTimer"><span class="ja">微信の音声メッセージのように長押しします</span><span class="zh">像微信语音一样，按住说，松开识别</span></div>
+      </div>
+
       <div class="voice-sample">
         <strong><span class="ja">話し方例：</span><span class="zh">说法示例：</span></strong><br>
         <span class="ja">「干豆腐を三袋、鶏もも肉を2個、豆腐皮を一つ」</span>
         <span class="zh">“干豆腐三袋，鸡腿肉两包，豆腐皮一份”</span>
       </div>
+
+      <div class="voice-api-config">
+        <input class="voice-api-input" id="voiceApiEndpoint" placeholder="/api/transcribe-volc 或 https://你的域名/api/transcribe-volc">
+        <button type="button" class="btn btn-outline btn-sm" onclick="saveVoiceApiEndpoint()"><span class="ja">API保存</span><span class="zh">保存API</span></button>
+      </div>
+      <div class="voice-help-text">
+        <span class="ja">※ 火山引擎の認証情報はHTMLに入れず、サーバー側 /api/transcribe-volc の環境変数に保存してください。</span>
+        <span class="zh">※ 火山引擎认证信息不要写在 HTML 里，请放在服务器 /api/transcribe-volc 的环境变量里。</span>
+      </div>
+
       <div class="voice-action-row">
-        <button type="button" class="btn voice-rec-btn" id="voiceRecBtn" onclick="startVoiceRecognition()">🎙 <span class="ja">話す</span><span class="zh">开始说话</span></button>
         <button type="button" class="btn btn-outline" onclick="parseVoiceTextFromInput()">🔎 <span class="ja">文字から解析</span><span class="zh">解析文字</span></button>
         <button type="button" class="btn btn-outline" onclick="clearVoiceOrder()">🧹 <span class="ja">クリア</span><span class="zh">清空</span></button>
       </div>
@@ -2546,332 +2580,50 @@ document.addEventListener('focusin',function(e){
 
 
 
-/* ===== V16 音声注文 / 语音订货 第一版 ===== */
+/* ===== V19 火山引擎 ASR 音声注文 / 语音订货：按住说话版 ===== */
 (function(){
-  let voiceRecognition=null;
-  let voiceListening=false;
   let voiceParsedItems=[];
+  let mediaRecorder=null;
+  let voiceChunks=[];
+  let voiceStream=null;
+  let voiceRecording=false;
+  let voiceRecordStart=0;
+  let voiceTimerId=null;
 
   function V$(id){return document.getElementById(id);}
   function vSafe(x){return String(x??'').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
   function vNorm(s){return String(s||'').toLowerCase().replace(/[\s　・,，、。\.\/／\-ー_（）()\[\]【】]/g,'');}
+  function vMsg(zh,ja){return currentLang==='zh'?zh:ja;}
 
   const cnNumMap={零:0,〇:0,一:1,壹:1,二:2,两:2,兩:2,贰:2,三:3,叁:3,四:4,肆:4,五:5,伍:5,六:6,陆:6,七:7,柒:7,八:8,捌:8,九:9,玖:9,十:10};
   const jpNumWords={ひとつ:1,一つ:1,いっこ:1,一個:1,いち:1,にこ:2,二個:2,ふたつ:2,二つ:2,さんこ:3,三個:3,みっつ:3,三つ:3,よっつ:4,四つ:4,ごこ:5,五個:5,むっつ:6,六つ:6,ななつ:7,七つ:7,やっつ:8,八つ:8,ここのつ:9,九つ:9,じゅっこ:10,十個:10};
 
-  function chineseNumberToInt(str){
-    str=String(str||'').trim();
-    if(!str)return null;
-    if(/^\d+$/.test(str))return parseInt(str,10);
-    if(jpNumWords[str])return jpNumWords[str];
-    if(str.length===1 && cnNumMap[str]!=null)return cnNumMap[str];
-    if(str.includes('十')){
-      const parts=str.split('十');
-      const left=parts[0]?cnNumMap[parts[0]]||parseInt(parts[0],10)||1:1;
-      const right=parts[1]?cnNumMap[parts[1]]||parseInt(parts[1],10)||0:0;
-      return left*10+right;
-    }
-    return null;
-  }
+  function chineseNumberToInt(str){str=String(str||'').trim();if(!str)return null;if(/^\d+$/.test(str))return parseInt(str,10);if(jpNumWords[str])return jpNumWords[str];if(str.length===1&&cnNumMap[str]!=null)return cnNumMap[str];if(str.includes('十')){const parts=str.split('十');const left=parts[0]?cnNumMap[parts[0]]||parseInt(parts[0],10)||1:1;const right=parts[1]?cnNumMap[parts[1]]||parseInt(parts[1],10)||0:0;return left*10+right;}return null;}
+  function getQtyAround(text,start,end){const after=text.slice(end,Math.min(text.length,end+14));const before=text.slice(Math.max(0,start-10),start);const re=/(\d+|[零〇一二两兩三四五六七八九十]{1,3}|ひとつ|ふたつ|みっつ|よっつ|一つ|二つ|三つ|四つ|五つ|六つ|七つ|八つ|九つ|一個|二個|三個|四個|五個|六個|七個|八個|九個|十個)\s*(袋|包|份|个|個|盒|箱|本|枚|パック|ケース|kg|g|キロ|つ)?/i;let m=after.match(re);if(m){const n=chineseNumberToInt(m[1]);if(n&&n>0)return n;}const reBefore=/(\d+|[零〇一二两兩三四五六七八九十]{1,3}|ひとつ|ふたつ|みっつ|よっつ|一つ|二つ|三つ|四つ|五つ|六つ|七つ|八つ|九つ|一個|二個|三個|四個|五個|六個|七個|八個|九個|十個)\s*(袋|包|份|个|個|盒|箱|本|枚|パック|ケース|kg|g|キロ|つ)?\s*$/i;m=before.match(reBefore);if(m){const n=chineseNumberToInt(m[1]);if(n&&n>0)return n;}return 1;}
 
-  function getQtyAround(text, start, end){
-    const after=text.slice(end, Math.min(text.length,end+12));
-    const before=text.slice(Math.max(0,start-8), start);
-    const re=/(\d+|[零〇一二两兩三四五六七八九十]{1,3}|ひとつ|ふたつ|みっつ|よっつ|一つ|二つ|三つ|四つ|五つ|六つ|七つ|八つ|九つ|一個|二個|三個|四個|五個|六個|七個|八個|九個|十個)\s*(袋|包|份|个|個|盒|箱|本|枚|パック|ケース|kg|g|キロ|つ)?/i;
-    let m=after.match(re);
-    if(m){const n=chineseNumberToInt(m[1]);if(n&&n>0)return n;}
-    const reBefore=/(\d+|[零〇一二两兩三四五六七八九十]{1,3}|ひとつ|ふたつ|みっつ|よっつ|一つ|二つ|三つ|四つ|五つ|六つ|七つ|八つ|九つ|一個|二個|三個|四個|五個|六個|七個|八個|九個|十個)\s*(袋|包|份|个|個|盒|箱|本|枚|パック|ケース|kg|g|キロ|つ)?\s*$/i;
-    m=before.match(reBefore);
-    if(m){const n=chineseNumberToInt(m[1]);if(n&&n>0)return n;}
-    return 1;
-  }
+  function productAliases(p){const arr=[];[p.name,p.name_zh,p.spec].forEach(x=>{if(x)arr.push(String(x));});const zh=String(p.name_zh||'');const ja=String(p.name||'');if(/鶏もも|鸡腿|雞腿|もも肉/.test(zh+ja))arr.push('鸡腿肉','雞腿肉','鸡肉腿','鸡腿','もも肉','鶏もも');if(/干豆腐|乾豆腐/.test(zh+ja))arr.push('干豆腐','乾豆腐','豆腐干');if(/豆腐皮/.test(zh+ja))arr.push('豆皮','豆腐皮');if(/ジャガイモ|土豆|じゃがいも/.test(zh+ja))arr.push('土豆','马铃薯','馬鈴薯','ジャガイモ','じゃがいも');if(/キャベツ|卷心菜|高丽菜|高麗菜/.test(zh+ja))arr.push('卷心菜','高丽菜','高麗菜','キャベツ');return [...new Set(arr.filter(Boolean))].sort((a,b)=>String(b).length-String(a).length);}
+  function findCandidates(raw){const text=vNorm(raw);const scored=[];(allProducts||[]).forEach(p=>{if(!p.active||Number(p.stock)<=0)return;let score=0;for(const a of productAliases(p)){const na=vNorm(a);if(!na)continue;if(text.includes(na))score=Math.max(score,100+na.length);else if(na.includes(text)&&text.length>=2)score=Math.max(score,70+text.length);}if(score>0)scored.push({product:p,score});});scored.sort((a,b)=>b.score-a.score);return scored.slice(0,6).map(x=>x.product);}
 
-  function productAliases(p){
-    const arr=[];
-    [p.name,p.name_zh,p.spec].forEach(x=>{if(x)arr.push(String(x));});
-    // 常见口语别名，可继续扩展
-    const zh=String(p.name_zh||'');
-    const ja=String(p.name||'');
-    if(/鶏もも|鸡腿|雞腿|もも肉/.test(zh+ja))arr.push('鸡腿肉','雞腿肉','鸡肉腿','もも肉');
-    if(/干豆腐|乾豆腐/.test(zh+ja))arr.push('干豆腐','乾豆腐','豆腐干');
-    if(/豆腐皮/.test(zh+ja))arr.push('豆皮','豆腐皮');
-    if(/ジャガイモ|土豆|じゃがいも/.test(zh+ja))arr.push('土豆','马铃薯','ジャガイモ','じゃがいも');
-    if(/キャベツ|卷心菜|高丽菜|高麗菜/.test(zh+ja))arr.push('卷心菜','高丽菜','高麗菜','キャベツ');
-    return [...new Set(arr.filter(Boolean))].sort((a,b)=>String(b).length-String(a).length);
-  }
+  function parseVoiceText(text){text=String(text||'').trim();if(!text)return [];const results=[];const used=new Set();const products=(allProducts||[]).filter(p=>p.active&&Number(p.stock)>0);products.forEach(p=>{for(const alias of productAliases(p)){const rawAlias=String(alias||'').trim();if(!rawAlias)continue;const idx=text.indexOf(rawAlias);if(idx>=0){const key=String(p.id);if(used.has(key))break;used.add(key);const qty=getQtyAround(text,idx,idx+rawAlias.length);const candidates=findCandidates(rawAlias);results.push({raw:rawAlias,qty,product_id:p.id,candidates:candidates.length?candidates:[p]});break;}}});const parts=text.split(/[，,、。\.\n；;和と]/).map(x=>x.trim()).filter(Boolean);parts.forEach(part=>{const already=results.some(r=>part.includes(r.raw));if(already)return;const cleaned=part.replace(/(\d+|[零〇一二两兩三四五六七八九十]{1,3}|ひとつ|ふたつ|みっつ|よっつ|一つ|二つ|三つ|四つ|五つ|六つ|七つ|八つ|九つ|一個|二個|三個|四個|五個|六個|七個|八個|九個|十個)\s*(袋|包|份|个|個|盒|箱|本|枚|パック|ケース|kg|g|キロ|つ)?/ig,'').replace(/我要|我想要|ください|お願いします|を|が|の|買う|注文|订|要/g,'').trim();if(cleaned.length<2)return;const cand=findCandidates(cleaned);if(cand.length){const first=cand[0];if(results.some(r=>String(r.product_id)===String(first.id)))return;results.push({raw:part,qty:getQtyAround(part,0,cleaned.length),product_id:first.id,candidates:cand});}});return results;}
 
-  function findCandidates(raw){
-    const text=vNorm(raw);
-    const scored=[];
-    (allProducts||[]).forEach(p=>{
-      if(!p.active || Number(p.stock)<=0)return;
-      let score=0;
-      for(const a of productAliases(p)){
-        const na=vNorm(a);
-        if(!na || na.length<1)continue;
-        if(text.includes(na))score=Math.max(score, 100+na.length);
-        else if(na.includes(text)&&text.length>=2)score=Math.max(score, 70+text.length);
-      }
-      if(score>0)scored.push({product:p,score});
-    });
-    scored.sort((a,b)=>b.score-a.score);
-    return scored.slice(0,5).map(x=>x.product);
-  }
-
-  function parseVoiceText(text){
-    text=String(text||'').trim();
-    if(!text)return [];
-    const results=[];
-    const used=new Set();
-    const products=(allProducts||[]).filter(p=>p.active && Number(p.stock)>0);
-
-    products.forEach(p=>{
-      for(const alias of productAliases(p)){
-        const rawAlias=String(alias||'').trim();
-        if(!rawAlias)continue;
-        const idx=text.indexOf(rawAlias);
-        if(idx>=0){
-          const key=String(p.id);
-          if(used.has(key))break;
-          used.add(key);
-          const qty=getQtyAround(text, idx, idx+rawAlias.length);
-          results.push({raw:rawAlias, qty, product_id:p.id, candidates:[p]});
-          break;
-        }
-      }
-    });
-
-    // 对没有直接匹配的短句，做候选匹配
-    const parts=text.split(/[，,、。\.\n；;和と]/).map(x=>x.trim()).filter(Boolean);
-    parts.forEach(part=>{
-      const already=results.some(r=>part.includes(r.raw));
-      if(already)return;
-      const cleaned=part.replace(/(\d+|[零〇一二两兩三四五六七八九十]{1,3}|ひとつ|ふたつ|みっつ|よっつ|一つ|二つ|三つ|四つ|五つ|六つ|七つ|八つ|九つ|一個|二個|三個|四個|五個|六個|七個|八個|九個|十個)\s*(袋|包|份|个|個|盒|箱|本|枚|パック|ケース|kg|g|キロ|つ)?/ig,'').replace(/我要|我想要|ください|お願いします|を|が|の|買う|注文|订|要/g,'').trim();
-      if(cleaned.length<2)return;
-      const cand=findCandidates(cleaned);
-      if(cand.length){
-        const first=cand[0];
-        if(results.some(r=>String(r.product_id)===String(first.id)))return;
-        results.push({raw:part, qty:getQtyAround(part,0,cleaned.length), product_id:first.id, candidates:cand});
-      }
-    });
-    return results;
-  }
-
-  function renderVoiceResults(items){
-    voiceParsedItems=items||[];
-    const wrap=V$('voiceResultWrap');
-    if(!wrap)return;
-    if(!voiceParsedItems.length){
-      wrap.innerHTML=`<div class="voice-empty">${currentLang==='zh'?'没有识别到可匹配的商品。可以修改文字后点击“解析文字”。':'一致する商品が見つかりません。文字を修正して「文字から解析」を押してください。'}</div>`;
-      return;
-    }
-    wrap.innerHTML=`<div class="voice-result-list">${voiceParsedItems.map((item,i)=>{
-      const opts=(item.candidates||[]).map(p=>`<option value="${vSafe(p.id)}" ${String(p.id)===String(item.product_id)?'selected':''}>${vSafe(p.name)}${p.name_zh?' / '+vSafe(p.name_zh):''}　${fmt(p.price)}（税抜）</option>`).join('');
-      return `<div class="voice-result-item">
-        <div class="voice-result-main">
-          <div class="voice-result-raw">${currentLang==='zh'?'识别':'認識'}：${vSafe(item.raw)}</div>
-          <select class="voice-result-select" data-voice-index="${i}">${opts}</select>
-        </div>
-        <input class="voice-qty-input" data-voice-qty="${i}" type="number" min="1" step="1" value="${Number(item.qty||1)}">
-      </div>`;
-    }).join('')}</div>`;
-  }
-
-  window.openVoiceOrderModal=function(){
-    const text=V$('voiceText');
-    const status=V$('voiceStatus');
-    if(text && !text.value)text.value='';
-    if(status){status.classList.remove('listening');status.innerHTML=currentLang==='zh'?'点击麦克风后说出商品和数量。识别后确认商品候选，再加入购物车。若手机浏览器不支持，请手动输入文字后点“解析文字”。':'マイクボタンを押して話してください。対応しないブラウザでは文字入力で解析できます。';}
-    renderVoiceResults([]);
-    openModal('modalVoiceOrder');
-  };
-  window.closeVoiceOrderModal=function(){
-    if(voiceRecognition && voiceListening){try{voiceRecognition.stop();}catch(e){}}
-    voiceListening=false;
-    const btn=V$('voiceRecBtn');if(btn)btn.classList.remove('listening');
-    closeModal('modalVoiceOrder');
-  };
-  window.clearVoiceOrder=function(){
-    const text=V$('voiceText');if(text)text.value='';
-    renderVoiceResults([]);
-    const status=V$('voiceStatus');if(status){status.classList.remove('listening');status.textContent=currentLang==='zh'?'已清空。':'クリアしました。';}
-  };
-  window.parseVoiceTextFromInput=function(){
-    const text=V$('voiceText')?.value||'';
-    renderVoiceResults(parseVoiceText(text));
-  };
-
-  function voiceSupportInfo(){
-    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    const secure=window.isSecureContext || location.protocol==='https:' || location.hostname==='localhost';
-    return {SR,secure};
-  }
-
-  function setVoiceStatus(msg, listening){
-    const status=V$('voiceStatus');
-    if(!status)return;
-    status.classList.toggle('listening',!!listening);
-    status.textContent=msg;
-  }
-
-  async function checkMicPermission(){
-    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-      return {ok:true, note:'getUserMedia unavailable'};
-    }
-    try{
-      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-      stream.getTracks().forEach(t=>t.stop());
-      return {ok:true};
-    }catch(e){
-      return {ok:false, error:e&&e.name?e.name:String(e)};
-    }
-  }
-
-  window.startVoiceRecognition=async function(){
-    const info=voiceSupportInfo();
-    const btn=V$('voiceRecBtn');
-
-    if(voiceListening && voiceRecognition){
-      try{voiceRecognition.stop();}catch(e){}
-      setVoiceStatus(currentLang==='zh'?'已停止收音。':'聞き取りを停止しました。',false);
-      return;
-    }
-
-    if(!info.secure){
-      setVoiceStatus(currentLang==='zh'?'语音识别需要 HTTPS 页面。请用 https:// 开头的网址打开。':'音声認識には HTTPS が必要です。https:// のURLで開いてください。',false);
-      return;
-    }
-
-    if(!info.SR){
-      setVoiceStatus(currentLang==='zh'?'这个手机浏览器不支持网页语音识别。请用 Android Chrome 打开，或先手动输入文字后点“解析文字”。':'このブラウザはWeb音声認識に対応していません。Android Chromeで開くか、文字入力で解析してください。',false);
-      return;
-    }
-
-    setVoiceStatus(currentLang==='zh'?'正在请求麦克风权限...':'マイク権限を確認しています...',true);
-    const mic=await checkMicPermission();
-    if(!mic.ok){
-      const msg=currentLang==='zh'
-        ?`麦克风权限没有打开：${mic.error}。请在浏览器地址栏左侧锁头/设置里允许麦克风，然后刷新页面。`
-        :`マイク権限が許可されていません：${mic.error}。ブラウザ設定でマイクを許可してから再読み込みしてください。`;
-      setVoiceStatus(msg,false);
-      return;
-    }
-
-    try{
-      voiceRecognition=new info.SR();
-      voiceRecognition.lang=currentLang==='zh'?'zh-CN':'ja-JP';
-      voiceRecognition.interimResults=true;
-      voiceRecognition.continuous=false;
-      voiceRecognition.maxAlternatives=3;
-
-      let finalText='';
-      let heardSomething=false;
-      let startedAt=Date.now();
-
-      voiceRecognition.onstart=function(){
-        voiceListening=true;
-        if(btn)btn.classList.add('listening');
-        setVoiceStatus(currentLang==='zh'?'正在听，请说清楚商品名和数量。例如：干豆腐三袋，鸡腿肉两包。':'聞き取り中です。商品名と数量を話してください。例：ジャガイモ2個、鶏もも肉3パック。',true);
-      };
-
-      voiceRecognition.onspeechstart=function(){
-        heardSomething=true;
-        setVoiceStatus(currentLang==='zh'?'已听到声音，正在识别...':'音声を検出しました。認識中です...',true);
-      };
-
-      voiceRecognition.onresult=function(e){
-        let interim='';
-        for(let i=e.resultIndex;i<e.results.length;i++){
-          const piece=e.results[i][0]?.transcript||'';
-          if(e.results[i].isFinal)finalText+=piece;
-          else interim+=piece;
-        }
-        const show=(finalText||interim||'').trim();
-        const textEl=V$('voiceText');
-        if(textEl && show)textEl.value=show;
-        if(show){
-          setVoiceStatus((currentLang==='zh'?'识别中：':'認識中：')+show,true);
-          const items=parseVoiceText(show);
-          if(items.length)renderVoiceResults(items);
-        }
-      };
-
-      voiceRecognition.onnomatch=function(){
-        setVoiceStatus(currentLang==='zh'?'听到了声音，但没有识别出文字。请靠近麦克风再试一次，或手动输入后解析。':'音声は検出されましたが文字にできませんでした。もう一度お試しください。',false);
-      };
-
-      voiceRecognition.onerror=function(e){
-        voiceListening=false;
-        if(btn)btn.classList.remove('listening');
-        const code=e&&e.error?e.error:'error';
-        const zhMap={
-          'not-allowed':'麦克风权限被拒绝。请打开浏览器麦克风权限后刷新页面。',
-          'service-not-allowed':'浏览器语音服务不可用。建议用 Android Chrome 打开。',
-          'no-speech':'没有检测到说话声音。请点击麦克风后马上说话。',
-          'audio-capture':'没有检测到麦克风。请检查手机浏览器权限。',
-          'network':'语音识别网络连接失败。请检查网络或换 Chrome。',
-          'aborted':'语音识别已中止。'
-        };
-        const jaMap={
-          'not-allowed':'マイク権限が拒否されました。ブラウザ設定でマイクを許可してください。',
-          'service-not-allowed':'音声認識サービスが利用できません。Android Chromeでお試しください。',
-          'no-speech':'音声が検出されませんでした。マイクを押したらすぐ話してください。',
-          'audio-capture':'マイクを検出できません。ブラウザ権限を確認してください。',
-          'network':'音声認識のネットワーク接続に失敗しました。',
-          'aborted':'音声認識が中断されました。'
-        };
-        setVoiceStatus((currentLang==='zh'?zhMap[code]:jaMap[code]) || ((currentLang==='zh'?'语音识别失败：':'音声認識エラー：')+code),false);
-      };
-
-      voiceRecognition.onend=function(){
-        voiceListening=false;
-        if(btn)btn.classList.remove('listening');
-        const text=(V$('voiceText')?.value||finalText||'').trim();
-        if(text){
-          const items=parseVoiceText(text);
-          renderVoiceResults(items);
-          setVoiceStatus((currentLang==='zh'?'识别完成：':'認識完了：')+text,false);
-        }else if(Date.now()-startedAt>500 && !heardSomething){
-          setVoiceStatus(currentLang==='zh'?'没有听到声音。请确认麦克风权限，并点击后马上说话。':'音声が検出されませんでした。マイク権限を確認し、押した後すぐ話してください。',false);
-        }
-      };
-
-      voiceRecognition.start();
-    }catch(e){
-      voiceListening=false;
-      if(btn)btn.classList.remove('listening');
-      setVoiceStatus(currentLang==='zh'?('启动语音失败：'+(e.message||e)):('音声認識を開始できません：'+(e.message||e)),false);
-    }
-  };
-
-  window.addVoiceItemsToCart=function(){
-    const rows=[...document.querySelectorAll('.voice-result-item')];
-    if(!rows.length){alert(currentLang==='zh'?'请先语音识别或解析文字':'先に音声認識または文字解析をしてください');return;}
-    const keepY=window.scrollY||document.documentElement.scrollTop||0;
-    const cart=typeof getCart==='function'?getCart():[];
-    let added=0;
-    rows.forEach(row=>{
-      const sel=row.querySelector('.voice-result-select');
-      const qtyEl=row.querySelector('.voice-qty-input');
-      const pid=sel?.value;
-      const qty=Math.max(1,parseInt(qtyEl?.value||'1',10)||1);
-      const p=(allProducts||[]).find(x=>String(x.id)===String(pid));
-      if(!p)return;
-      const idx=cart.findIndex(c=>String(c.product_id)===String(p.id));
-      if(idx>=0)cart[idx].qty=Number(cart[idx].qty||0)+qty;
-      else cart.push({product_id:p.id,qty,product_name:p.name,product_name_zh:p.name_zh||'',product_spec:p.spec,product_emoji:'',unit_price:p.price,tax_rate:p.tax_rate});
-      added+=qty;
-    });
-    if(!added){alert(currentLang==='zh'?'没有可加入的商品':'追加できる商品がありません');return;}
-    if(typeof setCart==='function')setCart(cart);
-    if(typeof renderProducts==='function')renderProducts();
-    if(typeof renderCart==='function')renderCart({keepOpen:false});
-    if(typeof updateCartBadge==='function')updateCartBadge();
-    closeVoiceOrderModal();
-    requestAnimationFrame(()=>window.scrollTo(0,keepY));
-    alert(currentLang==='zh'?`已加入购物车：${added}件`:`カートに追加しました：${added}点`);
-  };
+  function renderVoiceResults(items){voiceParsedItems=items||[];const wrap=V$('voiceResultWrap');if(!wrap)return;if(!voiceParsedItems.length){wrap.innerHTML=`<div class="voice-empty">${vMsg('没有识别到可匹配的商品。可以修改文字后点击“解析文字”。','一致する商品が見つかりません。文字を修正して「文字から解析」を押してください。')}</div>`;return;}wrap.innerHTML=`<div class="voice-result-list">${voiceParsedItems.map((item,i)=>{const opts=(item.candidates||[]).map(p=>`<option value="${vSafe(p.id)}" ${String(p.id)===String(item.product_id)?'selected':''}>${vSafe(p.name)}${p.name_zh?' / '+vSafe(p.name_zh):''}　${fmt(p.price)}（税抜）</option>`).join('');return `<div class="voice-result-item"><div class="voice-result-main"><div class="voice-result-raw">${vMsg('识别','認識')}：${vSafe(item.raw)}</div><select class="voice-result-select" data-voice-index="${i}">${opts}</select></div><input class="voice-qty-input" data-voice-qty="${i}" type="number" min="1" step="1" value="${Number(item.qty||1)}"><button type="button" class="voice-delete-btn" onclick="removeVoiceItem(${i})" title="delete">×</button></div>`;}).join('')}</div>`;}
+  function setVoiceStatus(msg,listening){const status=V$('voiceStatus');if(!status)return;status.classList.toggle('listening',!!listening);status.textContent=msg;}
+  function getVoiceEndpoint(){const el=V$('voiceApiEndpoint');return (el?.value||'').trim()||localStorage.getItem('fos_voiceApiEndpoint')||'/api/transcribe-volc';}
+  window.saveVoiceApiEndpoint=function(){const val=(V$('voiceApiEndpoint')?.value||'').trim();if(!val){alert(vMsg('请输入 API 地址，例如 /api/transcribe-volc','API URLを入力してください。例：/api/transcribe-volc'));return;}localStorage.setItem('fos_voiceApiEndpoint',val);alert(vMsg('已保存 API 地址','API URLを保存しました'));};
+  function updateTimer(){const el=V$('voiceTimer');if(!el||!voiceRecording)return;const sec=Math.max(0,Math.floor((Date.now()-voiceRecordStart)/1000));el.textContent=vMsg(`录音中 ${sec} 秒，松开后识别`,`録音中 ${sec} 秒、離すと認識します`);}
+  async function startHoldRecording(e){if(e){e.preventDefault();e.stopPropagation();}if(voiceRecording)return;if(!window.isSecureContext&&location.protocol!=='https:'&&location.hostname!=='localhost'){setVoiceStatus(vMsg('录音需要 HTTPS，请用 https:// 页面打开。','録音にはHTTPSが必要です。https://で開いてください。'),false);return;}if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){setVoiceStatus(vMsg('这个浏览器不支持录音。请用新版 Chrome / Safari，或手动输入后解析。','このブラウザは録音に対応していません。Chrome/Safariでお試しください。'),false);return;}try{const endpoint=getVoiceEndpoint();if(location.hostname.includes('github.io')&&endpoint==='/api/transcribe-volc'){setVoiceStatus(vMsg('当前是 GitHub Pages，需要填写你的后端 API 地址，例如 https://xxx.vercel.app/api/transcribe-volc。','GitHub Pagesでは別のAPI URLが必要です。例：https://xxx.vercel.app/api/transcribe-volc'),false);return;}voiceStream=await navigator.mediaDevices.getUserMedia({audio:true});voiceChunks=[];const mime=MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':(MediaRecorder.isTypeSupported('audio/mp4')?'audio/mp4':'audio/webm');mediaRecorder=new MediaRecorder(voiceStream,{mimeType:mime});mediaRecorder.ondataavailable=function(ev){if(ev.data&&ev.data.size>0)voiceChunks.push(ev.data);};mediaRecorder.onstop=function(){finishHoldRecording(mime);};voiceRecording=true;voiceRecordStart=Date.now();const btn=V$('voiceHoldBtn');if(btn)btn.classList.add('recording');setVoiceStatus(vMsg('正在录音，请继续按住按钮说话。','録音中です。ボタンを押したまま話してください。'),true);updateTimer();voiceTimerId=setInterval(updateTimer,300);mediaRecorder.start();}catch(err){stopVoiceTracks();setVoiceStatus(vMsg('无法打开麦克风，请检查浏览器权限：','マイクを開けません。権限を確認してください：')+(err?.message||err),false);}}
+  function stopHoldRecording(e){if(e){e.preventDefault();e.stopPropagation();}if(!voiceRecording)return;voiceRecording=false;clearInterval(voiceTimerId);voiceTimerId=null;const btn=V$('voiceHoldBtn');if(btn)btn.classList.remove('recording');const duration=Date.now()-voiceRecordStart;if(mediaRecorder&&mediaRecorder.state!=='inactive'){if(duration<500){try{mediaRecorder.stop();}catch(_e){}stopVoiceTracks();setVoiceStatus(vMsg('录音太短，请按住后说完整商品和数量。','録音が短すぎます。押しながら商品と数量を話してください。'),false);return;}setVoiceStatus(vMsg('录音完成，正在用 火山引擎 ASR 识别...','録音完了。火山引擎 ASRで認識中...'),true);try{mediaRecorder.stop();}catch(e){setVoiceStatus(vMsg('停止录音失败：','録音停止に失敗しました：')+(e.message||e),false);stopVoiceTracks();}}}
+  function stopVoiceTracks(){if(voiceStream){voiceStream.getTracks().forEach(t=>t.stop());voiceStream=null;}}
+  async function finishHoldRecording(mime){stopVoiceTracks();const blob=new Blob(voiceChunks,{type:mime||'audio/webm'});voiceChunks=[];if(!blob.size){setVoiceStatus(vMsg('没有录到声音，请再试一次。','音声が録音されませんでした。もう一度お試しください。'),false);return;}try{const text=await transcribeWithEndpoint(blob,mime);const clean=String(text||'').trim();if(!clean){setVoiceStatus(vMsg('火山引擎 没有返回文字，请再说清楚一点。','火山引擎から文字が返りませんでした。もう一度はっきり話してください。'),false);return;}const textEl=V$('voiceText');if(textEl)textEl.value=clean;const items=parseVoiceText(clean);renderVoiceResults(items);setVoiceStatus(vMsg('识别完成：','認識完了：')+clean,false);}catch(err){setVoiceStatus(vMsg('火山引擎 识别失败：','火山引擎認識に失敗しました：')+(err?.message||err),false);}}
+  async function transcribeWithEndpoint(blob,mime){const endpoint=getVoiceEndpoint();const fd=new FormData();const ext=(mime||'').includes('mp4')?'m4a':'webm';fd.append('audio',blob,'voice_order.'+ext);fd.append('language',currentLang==='zh'?'zh':'ja');const names=(allProducts||[]).filter(p=>p.active).slice(0,120).map(p=>[p.name,p.name_zh].filter(Boolean).join('/')).join('、');fd.append('product_hint',names);const res=await fetch(endpoint,{method:'POST',body:fd});const txt=await res.text();let data=null;try{data=JSON.parse(txt);}catch(_e){data={text:txt};}if(!res.ok){throw new Error(data?.error||data?.message||txt||('HTTP '+res.status));}return data.text||data.transcript||'';}
+  function bindHoldButton(){const btn=V$('voiceHoldBtn');if(!btn||btn.dataset.bound==='1')return;btn.dataset.bound='1';btn.addEventListener('pointerdown',startHoldRecording);btn.addEventListener('pointerup',stopHoldRecording);btn.addEventListener('pointercancel',stopHoldRecording);btn.addEventListener('pointerleave',function(e){if(voiceRecording)stopHoldRecording(e);});btn.addEventListener('contextmenu',e=>e.preventDefault());}
+  window.openVoiceOrderModal=function(){const text=V$('voiceText');const status=V$('voiceStatus');const endpoint=V$('voiceApiEndpoint');if(endpoint)endpoint.value=localStorage.getItem('fos_voiceApiEndpoint')||'/api/transcribe-volc';if(text&&!text.value)text.value='';if(status){status.classList.remove('listening');status.textContent=vMsg('按住按钮说话，松开后用 火山引擎 ASR 识别。识别后请选择商品候选，再加入购物车。','ボタンを押しながら話し、離すと火山引擎 ASRで認識します。候補を確認してカートに追加してください。');}renderVoiceResults([]);openModal('modalVoiceOrder');setTimeout(bindHoldButton,50);};
+  window.closeVoiceOrderModal=function(){if(voiceRecording)stopHoldRecording();stopVoiceTracks();closeModal('modalVoiceOrder');};
+  window.clearVoiceOrder=function(){const text=V$('voiceText');if(text)text.value='';renderVoiceResults([]);const status=V$('voiceStatus');if(status){status.classList.remove('listening');status.textContent=vMsg('已清空。','クリアしました。');}};
+  window.parseVoiceTextFromInput=function(){const text=V$('voiceText')?.value||'';renderVoiceResults(parseVoiceText(text));};
+  window.removeVoiceItem=function(i){voiceParsedItems.splice(i,1);renderVoiceResults(voiceParsedItems);};
+  window.addVoiceItemsToCart=function(){const rows=[...document.querySelectorAll('.voice-result-item')];if(!rows.length){alert(vMsg('请先语音识别或解析文字','先に音声認識または文字解析をしてください'));return;}const keepY=window.scrollY||document.documentElement.scrollTop||0;const cart=typeof getCart==='function'?getCart():[];let added=0;rows.forEach(row=>{const sel=row.querySelector('.voice-result-select');const qtyEl=row.querySelector('.voice-qty-input');const pid=sel?.value;const qty=Math.max(1,parseInt(qtyEl?.value||'1',10)||1);const p=(allProducts||[]).find(x=>String(x.id)===String(pid));if(!p)return;const idx=cart.findIndex(c=>String(c.product_id)===String(p.id));if(idx>=0)cart[idx].qty=Number(cart[idx].qty||0)+qty;else cart.push({product_id:p.id,qty,product_name:p.name,product_name_zh:p.name_zh||'',product_spec:p.spec,product_emoji:'',unit_price:p.price,tax_rate:p.tax_rate});added+=qty;});if(!added){alert(vMsg('没有可加入的商品','追加できる商品がありません'));return;}if(typeof setCart==='function')setCart(cart);if(typeof renderProducts==='function')renderProducts();if(typeof renderCart==='function')renderCart({keepOpen:false});if(typeof updateCartBadge==='function')updateCartBadge();closeVoiceOrderModal();requestAnimationFrame(()=>window.scrollTo(0,keepY));alert(vMsg(`已加入购物车：${added}件`,`カートに追加しました：${added}点`));};
+  window.addEventListener('load',()=>setTimeout(bindHoldButton,500));
 })();
 
 </script>
